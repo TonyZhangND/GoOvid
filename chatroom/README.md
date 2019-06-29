@@ -14,4 +14,5 @@ services, i.e. Ovid.
 
 ## Specifications
 
-I will follow the exact specifications in chatroom.pdf
+I will follow the exact specifications in chatroom.pdf. The program should be 
+able to run using master.py
