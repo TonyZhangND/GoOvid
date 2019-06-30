@@ -5,5 +5,6 @@ grid_size=$2
 master_port=$3
 
 go clean
-go build -o server
-./server $process_id $grid_size $master_port
+go build -o ovidServer
+# Run the server in the background
+./ovidServer $process_id $grid_size $master_port &
