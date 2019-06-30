@@ -42,14 +42,14 @@ class ClientHandler(Thread):
                     sys.stdout.flush()
                     wait_ack = False
                 else:
-                    print "Invalid Response: " + l
+                    print("Invalid Response: " + l)
             else:
                 try:
                     data = self.sock.recv(1024)
                     # sys.stderr.write(data)
                     self.buffer += data
                 except:
-                    # print sys.exc_info()
+                    # print(sys.exc_info())
                     self.valid = False
                     del threads[self.index]
                     self.sock.close()
@@ -81,7 +81,7 @@ def kill(index):
     pid = int(index)
     if pid >= 0:
         if pid not in threads:
-            print 'Master or testcase error!'
+            print('Master or testcase error!')
             return
         threads[pid].kill()
 
@@ -95,7 +95,7 @@ def send(index, data, set_wait_ack=False):
     pid = int(index)
     if pid >= 0:
         if pid not in threads:
-            print 'Master or testcase error!'
+            print('Master or testcase error!')
             return
         if set_wait_ack:
             wait_ack = True
@@ -124,7 +124,7 @@ def exit(force=False):
 
 def timeout():
     time.sleep(120)
-    print 'Timeout!'
+    print('Timeout!')
     exit(True)
 
 
@@ -154,7 +154,7 @@ def main(debug=False):
         sp1 = line.split(None, 1)
         sp2 = line.split()
         if len(sp1) != 2:  # validate input
-            print "Invalid command: " + line
+            print("Invalid command: " + line)
             exit(True)
 
         if sp1[0] == 'sleep':  # sleep command
@@ -164,7 +164,7 @@ def main(debug=False):
         try:
             pid = int(sp2[0])  # first field is pid
         except ValueError:
-            print "Invalid pid: " + sp2[0]
+            print("Invalid pid: " + sp2[0])
             exit(True)
 
         cmd = sp2[1]  # second field is command
@@ -172,7 +172,7 @@ def main(debug=False):
             try:
                 port = int(sp2[3])
             except ValueError:
-                print "Invalid port: " + sp2[3]
+                print("Invalid port: " + sp2[3])
                 exit(True)
 
             if debug:
@@ -196,7 +196,7 @@ def main(debug=False):
             kill(pid)
             time.sleep(1)  # sleep for a bit so that crash is detected
         else:
-            print "Invalid command: " + line
+            print("Invalid command: " + line)
 
 
 if __name__ == '__main__':
