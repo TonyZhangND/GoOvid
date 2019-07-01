@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type server struct {
@@ -72,22 +74,40 @@ func main() {
 	fmt.Println("Listening for master connecting on " + masterAddr)
 	masterListener, _ := net.Listen("tcp", masterAddr)
 	masterConn, _ := masterListener.Accept()
-	fmt.Println(masterConn)
+	defer masterConn.Close()
+	fmt.Println("Accepted master connection")
 
-	// for server.shouldRun {
-	// 		// accept connection on port
-	//
+	for server.shouldRun {
+		// process inputs from master
+		status, err := bufio.NewReader(masterConn).ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+		}
+		command := strings.Trim(status, " \n")
+		fmt.Printf("Command from master: %v\n", command)
+		switch command {
+		case "get":
+			fmt.Println("Processing 'get' from master")
 
-	// 		// run loop forever (or until ctrl-c)
-	// 		for {
-	// 			// will listen for message to process ending in newline (\n)
-	// 			message, _ := bufio.NewReader(conn).ReadString('\n')
-	// 			// output message received
-	// 			fmt.Print("Message Received:", string(message))
-	// 			// sample process for string received
-	// 			newmessage := strings.ToUpper(message)
-	// 			// send new string back to client
-	// 			conn.Write([]byte(newmessage + "\n"))
-	// 		}
-	// }
+		case "alive":
+			fmt.Println("Processing 'alive' from master")
+		case "broadcast":
+			fmt.Println("Processing 'broadcast' from master")
+		}
+		// get
+		// alive
+		// broadcast
+
+		// 		// run loop forever (or until ctrl-c)
+		// 		for {
+		// 			// will listen for message to process ending in newline (\n)
+		// 			message, _ := bufio.NewReader(conn).ReadString('\n')
+		// 			// output message received
+		// 			fmt.Print("Message Received:", string(message))
+		// 			// sample process for string received
+		// 			newmessage := strings.ToUpper(message)
+		// 			// send new string back to client
+		// 			conn.Write([]byte(newmessage + "\n"))
+		// 		}
+	}
 }
