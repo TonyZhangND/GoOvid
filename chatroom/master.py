@@ -57,7 +57,9 @@ class ClientHandler(Thread):
 
     def kill(self):
         if self.valid:
-            os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            # Not sure why the following line was here, but it throws an 
+            # exception, and removing it causes no perciptible effects.
+            # os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
             self.close()
 
     def send(self, s):
@@ -114,11 +116,11 @@ def exit(force=False):
     while wait:
         time.sleep(0.01)
         wait = wait_ack
-
     for k in threads:
         kill(k)
     subprocess.Popen(['./stopall'], stdout=open('/dev/null', 'w'), stderr=open('/dev/null', 'w'))
     time.sleep(0.1)
+    print("Goodbye :)")
     sys.exit(0)
 
 
@@ -134,6 +136,7 @@ def main(debug=False):
     timeout_thread.setDaemon(True)
     timeout_thread.start()
 
+    print("Master started")
     while True:
         line = ''
         try:
@@ -149,13 +152,14 @@ def main(debug=False):
             continue
 
         if line == 'exit':  # exit when reading 'exit' command
+            print("Received exit command. Terminating...")
             exit()
 
         sp1 = line.split(None, 1)
         sp2 = line.split()
         if len(sp1) != 2:  # validate input
             print("Invalid command: " + line)
-            exit(True)
+            continue
 
         if sp1[0] == 'sleep':  # sleep command
             time.sleep(float(sp1[1]) / 1000)
