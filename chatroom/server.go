@@ -29,6 +29,7 @@ var (
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
 	failureDetector map[processID]status
+	messageLog      []string
 )
 
 // // newServer is the constructor for server.
@@ -42,6 +43,7 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	shouldRun = true
 	masterConn = nil
 	failureDetector = make(map[processID]status)
+	messageLog = make([]string, 0, 100)
 }
 
 // String is the "toString" method for this server
@@ -63,6 +65,7 @@ func sendToMaster(msg string) {
 	}
 }
 
+// Respond to an "alive" command from the master
 func doAlive() {
 	// compute the set of live nodes
 	aliveSet := make([]string, len(failureDetector))
@@ -74,6 +77,17 @@ func doAlive() {
 	// compose and send response to master
 	response := "alive " + strings.Join(aliveSet, ",")
 	sendToMaster(response)
+}
+
+// Respond to "get" command from the master
+func doGet() {
+	response := "messages " + strings.Join(messageLog, ",")
+	sendToMaster(response)
+}
+
+// Respond to "broadcast" command from the master
+func doBroadcast() {
+	// TODO
 }
 
 func main() {
@@ -98,10 +112,7 @@ func main() {
 
 	// initialize server
 	fmt.Println("Launching server...")
-	initServer(
-		processID(pid),
-		uint16(gridSize),
-		uint16(masterPort))
+	initServer(processID(pid), uint16(gridSize), uint16(masterPort))
 	fmt.Println(serverInfo())
 
 	// listen for master on the master address
@@ -123,30 +134,14 @@ func main() {
 		fmt.Printf("Command from master: %v\n", command)
 		switch command {
 		case "get":
-			fmt.Println("Processing 'get' from master")
-
+			doGet()
 		case "alive":
-			fmt.Println("Processing 'alive' from master")
 			doAlive()
-			fmt.Println("Done responding to master")
-
 		case "broadcast":
-			fmt.Println("Processing 'broadcast' from master")
+			doBroadcast()
+		default:
+			fmt.Printf("Invalid command %v from master\n", command)
 		}
-		// get
-		// alive
-		// broadcast
-
-		// 		// run loop forever (or until ctrl-c)
-		// 		for {
-		// 			// will listen for message to process ending in newline (\n)
-		// 			message, _ := bufio.NewReader(conn).ReadString('\n')
-		// 			// output message received
-		// 			fmt.Print("Message Received:", string(message))
-		// 			// sample process for string received
-		// 			newmessage := strings.ToUpper(message)
-		// 			// send new string back to client
-		// 			conn.Write([]byte(newmessage + "\n"))
-		// 		}
+		fmt.Println("Done responding to master")
 	}
 }
