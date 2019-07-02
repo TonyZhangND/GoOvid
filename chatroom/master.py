@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 The master program for CS5414 project 0
 """
