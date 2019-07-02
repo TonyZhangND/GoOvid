@@ -19,7 +19,7 @@ const (
 	dead  = iota
 )
 
-type server struct {
+var (
 	physID     processID
 	gridSize   uint16
 	masterIP   string
@@ -29,52 +29,51 @@ type server struct {
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
 	failureDetector map[processID]status
+)
+
+// // newServer is the constructor for server.
+// // It returns a server struct with default values for some fields.
+func initServer(pid processID, gridSz uint16, mstrPort uint16) {
+	physID = pid
+	gridSize = gridSz
+	masterIP = "127.0.0.1"
+	masterPort = mstrPort
+	gridIP = "127.0.0.1"
+	shouldRun = true
+	masterConn = nil
+	failureDetector = make(map[processID]status)
 }
 
-// newServer is the constructor for server.
-// It returns a server struct with default values for some fields.
-func newServer(physID processID, gridSize uint16, masterPort uint16) server {
-	return server{
-		physID,
-		uint16(gridSize),
-		"127.0.0.1",
-		uint16(masterPort),
-		"127.0.0.1",
-		true,
-		nil,
-		make(map[processID]status)}
-}
-
-// String is the "toString" method for a server object
-// It returns a string describing this server s.
-func (s server) String() string {
+// String is the "toString" method for this server
+// It returns a string describing this server
+func serverInfo() string {
 	return fmt.Sprintf("* GoOvid server *\n"+
 		"physID: %d\n"+
 		"gridSize: %d\n"+
 		"masterPort: %d\n",
-		s.physID, s.gridSize, s.masterPort)
+		physID, gridSize, masterPort)
 }
 
 // sendToMaster sends msg string to the master
-func (s server) sendToMaster(msg string) {
-	_, err := s.masterConn.Write([]byte(msg + "\n"))
+func sendToMaster(msg string) {
+	_, err := masterConn.Write([]byte(msg + "\n"))
 	if err != nil {
 		fmt.Printf("Error occured while sending msg '%v' to master: %v",
 			msg, err)
 	}
 }
 
-func (s server) doAlive() {
+func doAlive() {
 	// compute the set of live nodes
-	aliveSet := make([]string, len(s.failureDetector))
-	for physID, state := range s.failureDetector {
+	aliveSet := make([]string, len(failureDetector))
+	for physID, state := range failureDetector {
 		if state == alive {
 			aliveSet = append(aliveSet, string(physID))
 		}
 	}
 	// compose and send response to master
 	response := "alive " + strings.Join(aliveSet, ",")
-	s.sendToMaster(response)
+	sendToMaster(response)
 }
 
 func main() {
@@ -99,22 +98,22 @@ func main() {
 
 	// initialize server
 	fmt.Println("Launching server...")
-	server := newServer(
+	initServer(
 		processID(pid),
 		uint16(gridSize),
 		uint16(masterPort))
-	fmt.Println(server)
+	fmt.Println(serverInfo())
 
 	// listen for master on the master address
-	masterAddr := fmt.Sprintf("%s:%d", server.masterIP, server.masterPort)
+	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
 	fmt.Println("Listening for master connecting on " + masterAddr)
-	masterListener, _ := net.Listen("tcp", masterAddr)
-	masterConn, _ := masterListener.Accept()
-	defer masterConn.Close()
-	server.masterConn = masterConn
+	mstrListener, _ := net.Listen("tcp", masterAddr)
+	mstrConn, _ := mstrListener.Accept()
+	defer mstrConn.Close()
+	masterConn = mstrConn
 	fmt.Println("Accepted master connection. Listening for input...")
 
-	for server.shouldRun {
+	for shouldRun {
 		// process inputs from master
 		status, err := bufio.NewReader(masterConn).ReadString('\n')
 		if err != nil {
@@ -128,7 +127,7 @@ func main() {
 
 		case "alive":
 			fmt.Println("Processing 'alive' from master")
-			server.doAlive()
+			doAlive()
 			fmt.Println("Done responding to master")
 
 		case "broadcast":
