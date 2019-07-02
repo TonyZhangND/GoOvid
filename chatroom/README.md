@@ -17,6 +17,14 @@ services, i.e. Ovid.
 I will follow the exact specifications in chatroom.pdf. The program should be 
 able to run using master.py
 
+Server id's always range from 0 - gridSize
+
+### Port allocation
+
+- Port numbers 1024 - 2999 are reserved for master - server
+- Each server listens for connections on 3000 + physID
+- Each server dials for connections on the range 3000 - 3000 + gridSize
+
 ## Requirements
 
 - Server can be compiled with the latest version of Go

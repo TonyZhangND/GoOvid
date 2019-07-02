@@ -109,6 +109,10 @@ func main() {
 			"as masterPort\n", masterPort)
 		os.Exit(1)
 	}
+	if masterPort > 2999 {
+		fmt.Printf("Port number %d is reserved for inter-server use\n", masterPort)
+		os.Exit(1)
+	}
 
 	// initialize server
 	fmt.Println("Launching server...")
