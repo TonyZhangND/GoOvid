@@ -16,3 +16,8 @@ services, i.e. Ovid.
 
 I will follow the exact specifications in chatroom.pdf. The program should be 
 able to run using master.py
+
+## Requirements
+
+- Server can be compiled with the latest version of Go
+- master.py should be run with Python 2. It is incompatible with Python 3
