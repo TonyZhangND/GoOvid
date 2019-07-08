@@ -24,6 +24,7 @@ Server id's always range from 0 - gridSize
 - Port numbers 1024 - 2999 are reserved for master - server
 - Each server listens for connections on 3000 + physID
 - Each server dials for connections on the range 3000 - 3000 + gridSize
+  - Each server dials to servers whose physIDs is less than its own physID
 
 ## Requirements
 

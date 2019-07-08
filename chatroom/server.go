@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -36,8 +37,9 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	messageLog = make([]string, 0, 100)
 	// populate failure detector with all nodes
 	for pid := uint16(0); pid < gridSz; pid++ {
-		failureDetector.addProcess(processID(pid))
+		failureDetector.trackProcess(processID(pid))
 	}
+	failureDetector.markAsUp(physID)
 }
 
 // String is the "toString" method for this server
@@ -59,32 +61,57 @@ func sendToMaster(msg string) {
 	}
 }
 
-// Respond to an "alive" command from the master
+// Responds to an "alive" command from the master
 func doAlive() {
 	aliveSet := failureDetector.getAlive()
-	response := make([]string, 0)
+	rep := make([]string, 0)
 	for _, pid := range aliveSet { // find the nodes that are up
-		response = append(response, string(pid))
+		rep = append(rep, strconv.Itoa(int(pid)))
 	}
 	// compose and send response to master
-	reply := "alive " + strings.Join(response, ",")
+	reply := "alive " + strings.Join(rep, ",")
 	sendToMaster(reply)
 }
 
-// Respond to "get" command from the master
+// Responds to "get" command from the master
 func doGet() {
 	response := "messages " + strings.Join(messageLog, ",")
 	sendToMaster(response)
 }
 
-// Respond to "broadcast" command from the master
+// Responds to "broadcast" command from the master
 func doBroadcast() {
 	// TODO
 }
 
-// Listen and establish new connections
-func listenForConnections(l net.Listener) {
-	for {
+// Dials for new connections to all pid <= my pid
+func dialForConnections() {
+	for shouldRun {
+		down := failureDetector.getDead()
+		for _, pid := range down {
+			if pid < physID && !failureDetector.isUp(pid) {
+				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
+				c, err := net.DialTimeout("tcp", dialingAddr, 20*time.Millisecond)
+				if err == nil {
+					failureDetector.markAsUp(pid)
+					go handleConnection(c)
+				}
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// Listens and establishes new connections
+func listenForConnections() {
+	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+physID)
+	l, err := net.Listen("tcp", listenerAddr)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer l.Close()
+	for shouldRun {
 		c, err := l.Accept()
 		if err != nil {
 			fmt.Println(err)
@@ -94,23 +121,14 @@ func listenForConnections(l net.Listener) {
 	}
 }
 
-// Main thread for each server connection
+// TODO: Main thread for each server connection
 func handleConnection(c net.Conn) {
 	// TODO: Spawn a failure detector
 	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
-	// for {
-	// 	data, err := bufio.NewReader(c).ReadString('\n')
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-	// 	msg := strings.TrimSpace(string(data))
-	// 	if msg == "gekkuP" {
-	// 		break
-	// 	}
-	// 	c.Write([]byte("hello"))
-	// }
-	c.Close()
+	for shouldRun {
+		time.Sleep(2 * time.Second)
+	}
+	// c.Close()
 }
 
 func main() {
@@ -149,18 +167,15 @@ func main() {
 	mstrConn, _ := mstrListener.Accept()
 	defer mstrConn.Close()
 	masterConn = mstrConn
-	fmt.Println("Accepted master connection. Listening for input...")
+	fmt.Println("Accepted master connection")
 
 	// initialize and maintain connections with peers
-	l, err := net.Listen("tcp4", string(basePort+physID))
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer l.Close()
-	go listenForConnections(l)
+	fmt.Println("Listening for peer connections")
+	go listenForConnections()
+	fmt.Println("Dialing for peer connections")
+	go dialForConnections()
 
-	// process inputs from master
+	// main loop: process commands from master
 	for shouldRun {
 		data, err := bufio.NewReader(masterConn).ReadString('\n')
 		if err != nil {
