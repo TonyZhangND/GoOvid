@@ -7,16 +7,19 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type (
-	status    int // the perceived operational status of a node
-	processID uint16
+	processID    uint16
+	stateTracker struct {
+		status map[processID]bool
+		sync.RWMutex
+	}
 )
 
 const (
-	alive = iota
-	dead  = iota
+	basePort = 3000
 )
 
 var (
@@ -28,12 +31,44 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	failureDetector map[processID]status
+	failureDetector stateTracker
 	messageLog      []string
 )
 
-// // newServer is the constructor for server.
-// // It returns a server struct with default values for some fields.
+// Constructor for state tracker
+func newStateTracker() stateTracker {
+	return stateTracker{status: make(map[processID]bool)}
+}
+
+// Mark a process as down in st
+func (st *stateTracker) markAsDown(pid processID) {
+	st.Lock()
+	st.status[pid] = false
+	st.Unlock()
+}
+
+// Mark a process as up in st
+func (st *stateTracker) markAsUp(pid processID) {
+	st.Lock()
+	st.status[pid] = true
+	st.Unlock()
+}
+
+// Returns a slice containing the list of live processes in st
+func (st *stateTracker) getAlive() []processID {
+	result := make([]processID, 0)
+	st.RLock()
+	for pid, up := range st.status { // find the nodes that are up
+		if up {
+			result = append(result, pid)
+		}
+	}
+	defer st.RUnlock()
+	return result
+}
+
+// newServer is the constructor for server.
+// It returns a server struct with default values for some fields.
 func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	physID = pid
 	gridSize = gridSz
@@ -42,8 +77,9 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	gridIP = "127.0.0.1"
 	shouldRun = true
 	masterConn = nil
-	failureDetector = make(map[processID]status)
+	failureDetector = newStateTracker()
 	messageLog = make([]string, 0, 100)
+	// TODO: populate failure detector with all nodes
 }
 
 // String is the "toString" method for this server
@@ -67,16 +103,14 @@ func sendToMaster(msg string) {
 
 // Respond to an "alive" command from the master
 func doAlive() {
-	// compute the set of live nodes
-	aliveSet := make([]string, len(failureDetector))
-	for physID, state := range failureDetector {
-		if state == alive {
-			aliveSet = append(aliveSet, string(physID))
-		}
+	aliveSet := failureDetector.getAlive()
+	response := make([]string, 0)
+	for _, pid := range aliveSet { // find the nodes that are up
+		response = append(response, string(pid))
 	}
 	// compose and send response to master
-	response := "alive " + strings.Join(aliveSet, ",")
-	sendToMaster(response)
+	reply := "alive " + strings.Join(response, ",")
+	sendToMaster(reply)
 }
 
 // Respond to "get" command from the master
@@ -88,6 +122,37 @@ func doGet() {
 // Respond to "broadcast" command from the master
 func doBroadcast() {
 	// TODO
+}
+
+// Listen and establish new connections
+func listenForConnections(l net.Listener) {
+	for {
+		c, err := l.Accept()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		go handleConnection(c)
+	}
+}
+
+// Main thread for each server connection
+func handleConnection(c net.Conn) {
+	// TODO: Spawn a failure detector
+	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+	// for {
+	// 	data, err := bufio.NewReader(c).ReadString('\n')
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 		return
+	// 	}
+	// 	msg := strings.TrimSpace(string(data))
+	// 	if msg == "gekkuP" {
+	// 		break
+	// 	}
+	// 	c.Write([]byte("hello"))
+	// }
+	c.Close()
 }
 
 func main() {
@@ -128,13 +193,22 @@ func main() {
 	masterConn = mstrConn
 	fmt.Println("Accepted master connection. Listening for input...")
 
+	// initialize and maintain connections with peers
+	l, err := net.Listen("tcp4", string(basePort+physID))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer l.Close()
+	go listenForConnections(l)
+
+	// process inputs from master
 	for shouldRun {
-		// process inputs from master
-		status, err := bufio.NewReader(masterConn).ReadString('\n')
+		data, err := bufio.NewReader(masterConn).ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
 		}
-		command := strings.Trim(status, " \n")
+		command := strings.TrimSpace(data)
 		fmt.Printf("Command from master: %v\n", command)
 		switch command {
 		case "get":
@@ -148,4 +222,6 @@ func main() {
 		}
 		fmt.Println("Done responding to master")
 	}
+	fmt.Println("Terminating")
+	os.Exit(0)
 }
