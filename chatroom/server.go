@@ -7,19 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
-)
-
-type (
-	processID    uint16
-	stateTracker struct {
-		status map[processID]bool
-		sync.RWMutex
-	}
-)
-
-const (
-	basePort = 3000
 )
 
 var (
@@ -35,38 +22,6 @@ var (
 	messageLog      []string
 )
 
-// Constructor for state tracker
-func newStateTracker() stateTracker {
-	return stateTracker{status: make(map[processID]bool)}
-}
-
-// Mark a process as down in st
-func (st *stateTracker) markAsDown(pid processID) {
-	st.Lock()
-	st.status[pid] = false
-	st.Unlock()
-}
-
-// Mark a process as up in st
-func (st *stateTracker) markAsUp(pid processID) {
-	st.Lock()
-	st.status[pid] = true
-	st.Unlock()
-}
-
-// Returns a slice containing the list of live processes in st
-func (st *stateTracker) getAlive() []processID {
-	result := make([]processID, 0)
-	st.RLock()
-	for pid, up := range st.status { // find the nodes that are up
-		if up {
-			result = append(result, pid)
-		}
-	}
-	defer st.RUnlock()
-	return result
-}
-
 // newServer is the constructor for server.
 // It returns a server struct with default values for some fields.
 func initServer(pid processID, gridSz uint16, mstrPort uint16) {
@@ -79,7 +34,10 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	masterConn = nil
 	failureDetector = newStateTracker()
 	messageLog = make([]string, 0, 100)
-	// TODO: populate failure detector with all nodes
+	// populate failure detector with all nodes
+	for pid := uint16(0); pid < gridSz; pid++ {
+		failureDetector.addProcess(processID(pid))
+	}
 }
 
 // String is the "toString" method for this server
