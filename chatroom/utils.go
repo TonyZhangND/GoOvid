@@ -8,7 +8,7 @@ import (
 
 type processID uint16
 
-// A connTracker ct is a map from processID to a connHandler object.
+// A connTracker ct is a thread-safe map from processID to a connHandler object.
 // It is initialized as ct[p]=nil for all known processes p.
 // For each process p, when a connHandler c is established with it,
 // we mark ct[p] = c.
@@ -46,7 +46,7 @@ func newConnTracker(knownProcesses []processID) connTracker {
 // 	st.Unlock()
 // }
 
-// Marks a process as down in ct
+// Marks a process as down in ct and de-registers its connHandler object
 func (ct *connTracker) markAsDown(pid processID) {
 	ct.RLock()
 	handler, ok := ct.tracker[pid]
@@ -64,7 +64,7 @@ func (ct *connTracker) markAsDown(pid processID) {
 	ct.Unlock()
 }
 
-// Marks a process as up in ct and register its net.Conn object
+// Marks a process as up in ct and register its connHandler object
 func (ct *connTracker) markAsUp(pid processID, handler *connHandler) {
 	ct.RLock()
 	conn, ok := ct.tracker[pid]
@@ -94,7 +94,7 @@ func (ct *connTracker) isUp(pid processID) bool {
 	return handler != nil
 }
 
-// Returns a slice containing the list of up processes in st
+// Returns a slice containing the list of up processes in ct
 func (ct *connTracker) getAlive() []processID {
 	result := make([]processID, 0)
 	ct.RLock()
@@ -121,9 +121,10 @@ func (ct *connTracker) getDead() []processID {
 	return result
 }
 
-// Sends msg on all channels
+// Sends msg on all channels.
+// Applies Ovid message format and headers
 func (ct *connTracker) broadcast(msg string) {
-	s := fmt.Sprintf("msg %v %s", myPhysID, msg)
+	s := fmt.Sprintf("msg %v %s\n", myPhysID, msg)
 	ct.RLock()
 	for _, handler := range ct.tracker {
 		if handler != nil {

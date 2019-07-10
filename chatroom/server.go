@@ -20,7 +20,7 @@ var (
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
 	connRouter connTracker
-	messageLog []string
+	messageLog []string // TODO: this won't work; needs to be thread-safe
 )
 
 // newServer is the constructor for server.
@@ -67,6 +67,7 @@ func doAlive() {
 	for _, pid := range aliveSet { // find the nodes that are up
 		rep = append(rep, strconv.Itoa(int(pid)))
 	}
+	// TODO: Sort the alive set
 	// compose and send response to master
 	reply := "alive " + strings.Join(rep, ",")
 	sendToMaster(reply)
@@ -80,7 +81,7 @@ func doGet() {
 
 // Responds to "broadcast" command from the master
 func doBroadcast() {
-
+	// TODO
 }
 
 // Dials for new connections to all pid <= my pid

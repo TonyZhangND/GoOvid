@@ -28,8 +28,14 @@ Server id's always range from 0 - gridSize
 
 ### How connections are established
 
-a connHandler registers its conn in the connTracker when it receives a ping
+A connHandler registers its conn in the connTracker when it receives a ping
 identifying the other party on the line
+
+### Messaging format
+
+Heartbeat pings are formatted as `ping [sender]`.
+
+Other messages are formatted as `msg [sender] [contents]`.
 
 ## Requirements
 
