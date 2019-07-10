@@ -60,6 +60,7 @@ func (ct *connTracker) markAsDown(pid processID) {
 		fmt.Printf("Error: process %v does not exist in failure detector", pid)
 		os.Exit(1)
 	}
+	conn.Close()
 	ct.Lock()
 	ct.tracker[pid] = nil
 	ct.Unlock()
@@ -109,7 +110,7 @@ func (ct *connTracker) getAlive() []processID {
 	return result
 }
 
-// Returns a slice containing the list of down processes in st
+// Returns a slice containing the list of down processes in ct
 func (ct *connTracker) getDead() []processID {
 	result := make([]processID, 0)
 	ct.RLock()
@@ -120,4 +121,15 @@ func (ct *connTracker) getDead() []processID {
 	}
 	defer ct.RUnlock()
 	return result
+}
+
+// Returns a true iff pid is a known process in ct
+func (ct *connTracker) isKnown(pid processID) bool {
+	ct.RLock()
+	defer ct.RUnlock()
+	_, ok := ct.tracker[pid]
+	if ok {
+		return true
+	}
+	return false
 }

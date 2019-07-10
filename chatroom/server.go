@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	physID     processID
+	myPhysID   processID
 	gridSize   uint16
 	masterIP   string
 	masterPort uint16
@@ -19,14 +19,14 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	failureDetector connTracker
-	messageLog      []string
+	connStatus connTracker
+	messageLog []string
 )
 
 // newServer is the constructor for server.
 // It returns a server struct with default values for some fields.
 func initServer(pid processID, gridSz uint16, mstrPort uint16) {
-	physID = pid
+	myPhysID = pid
 	gridSize = gridSz
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
@@ -37,7 +37,7 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	for i := 0; i < int(gridSz); i++ {
 		knownProcesses[i] = processID(i)
 	}
-	failureDetector = newConnTracker(knownProcesses)
+	connStatus = newConnTracker(knownProcesses)
 	messageLog = make([]string, 0, 100)
 }
 
@@ -48,7 +48,7 @@ func serverInfo() string {
 		"physID: %d\n"+
 		"gridSize: %d\n"+
 		"masterPort: %d\n",
-		physID, gridSize, masterPort)
+		myPhysID, gridSize, masterPort)
 }
 
 // sendToMaster sends msg string to the master
@@ -62,7 +62,7 @@ func sendToMaster(msg string) {
 
 // Responds to an "alive" command from the master
 func doAlive() {
-	aliveSet := failureDetector.getAlive()
+	aliveSet := connStatus.getAlive()
 	rep := make([]string, 0)
 	for _, pid := range aliveSet { // find the nodes that are up
 		rep = append(rep, strconv.Itoa(int(pid)))
@@ -86,13 +86,14 @@ func doBroadcast() {
 // Dials for new connections to all pid <= my pid
 func dialForConnections() {
 	for shouldRun {
-		down := failureDetector.getDead()
+		down := connStatus.getDead()
 		for _, pid := range down {
-			if pid <= physID && !failureDetector.isUp(pid) {
+			if pid <= myPhysID && !connStatus.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
-				c, err := net.DialTimeout("tcp", dialingAddr, 20*time.Millisecond)
+				c, err := net.DialTimeout("tcp", dialingAddr,
+					20*time.Millisecond)
 				if err == nil {
-					failureDetector.markAsUp(pid, c)
+					connStatus.markAsUp(pid, c)
 					go handleConnection(c)
 				}
 			}
@@ -103,7 +104,7 @@ func dialForConnections() {
 
 // Listens and establishes new connections
 func listenForConnections() {
-	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+physID)
+	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+myPhysID)
 	l, err := net.Listen("tcp", listenerAddr)
 	if err != nil {
 		fmt.Println(err)
@@ -121,13 +122,51 @@ func listenForConnections() {
 }
 
 // TODO: Main thread for each server connection
-func handleConnection(c net.Conn) {
+func handleConnection(conn net.Conn) {
 	// TODO: Spawn a failure detector
-	fmt.Printf("Serving %s\n", c.RemoteAddr().String())
+	defer conn.Close()
+	fmt.Printf("Serving %s\n", conn.RemoteAddr().String())
 	for shouldRun {
+		data, err := bufio.NewReader(conn).ReadString('\n')
+		if err != nil {
+			fmt.Println(err)
+		}
+		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+		header := dataSlice[0]
+		payload := dataSlice[1]
+		fmt.Printf("Type of message: %v\n", header)
+		switch header {
+		case "ping":
+			doRcvPing(payload, conn)
+		case "msg":
+			doRcvMsg(payload)
+		default:
+			fmt.Printf("Error, Invalid msg %v from master\n", header)
+		}
+		fmt.Println("Done responding to master")
 		time.Sleep(2 * time.Second)
 	}
-	// c.Close()
+}
+
+func doRcvPing(s string, conn net.Conn) {
+	sender, err := strconv.Atoi(s)
+	if err != nil {
+		fmt.Printf("Error, Invalid ping received by %v\n", myPhysID)
+		os.Exit(1)
+	}
+	// check that sender is a valid process
+	if !connStatus.isKnown(processID(sender)) {
+		fmt.Printf("Error, Invalid ping from  %v received by %v\n",
+			myPhysID, sender)
+		os.Exit(1)
+	}
+	connStatus.markAsUp(processID(sender), conn)
+}
+
+func doRcvMsg(s string) {
+	// sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
+	// sender := sSlice[0]
+	// msg := sSlice[1]
 }
 
 func main() {
@@ -190,7 +229,7 @@ func main() {
 		case "broadcast":
 			doBroadcast()
 		default:
-			fmt.Printf("Invalid command %v from master\n", command)
+			fmt.Printf("Error, invalid command %v from master\n", command)
 		}
 		fmt.Println("Done responding to master")
 	}
