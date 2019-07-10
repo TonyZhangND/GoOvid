@@ -19,7 +19,7 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	failureDetector stateTracker
+	failureDetector connTracker
 	messageLog      []string
 )
 
@@ -33,13 +33,12 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	gridIP = "127.0.0.1"
 	shouldRun = true
 	masterConn = nil
-	failureDetector = newStateTracker()
-	messageLog = make([]string, 0, 100)
-	// populate failure detector with all nodes
-	for pid := uint16(0); pid < gridSz; pid++ {
-		failureDetector.trackProcess(processID(pid))
+	knownProcesses := make([]processID, gridSz)
+	for i := 0; i < int(gridSz); i++ {
+		knownProcesses[i] = processID(i)
 	}
-	failureDetector.markAsUp(physID)
+	failureDetector = newConnTracker(knownProcesses)
+	messageLog = make([]string, 0, 100)
 }
 
 // String is the "toString" method for this server
@@ -89,11 +88,11 @@ func dialForConnections() {
 	for shouldRun {
 		down := failureDetector.getDead()
 		for _, pid := range down {
-			if pid < physID && !failureDetector.isUp(pid) {
+			if pid <= physID && !failureDetector.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
 				c, err := net.DialTimeout("tcp", dialingAddr, 20*time.Millisecond)
 				if err == nil {
-					failureDetector.markAsUp(pid)
+					failureDetector.markAsUp(pid, c)
 					go handleConnection(c)
 				}
 			}
