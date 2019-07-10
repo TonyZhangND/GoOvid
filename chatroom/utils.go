@@ -133,14 +133,3 @@ func (ct *connTracker) broadcast(msg string) {
 	ct.RUnlock()
 	return
 }
-
-// // Returns a true iff pid is a known process in ct
-// func (ct *connTracker) isKnown(pid processID) bool {
-// 	ct.RLock()
-// 	defer ct.RUnlock()
-// 	_, ok := ct.tracker[pid]
-// 	if ok {
-// 		return true
-// 	}
-// 	return false
-// }

@@ -94,7 +94,7 @@ func dialForConnections() {
 					20*time.Millisecond)
 				if err == nil {
 					ch := newConnHandlerKnownOther(c, pid)
-					go ch.handleConnection(c)
+					go ch.handleConnection()
 				}
 			}
 		}
@@ -118,7 +118,7 @@ func listenForConnections() {
 			os.Exit(1)
 		}
 		ch := newConnHandler(c)
-		go ch.handleConnection(c)
+		go ch.handleConnection()
 	}
 }
 
