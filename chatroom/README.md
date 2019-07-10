@@ -26,6 +26,11 @@ Server id's always range from 0 - gridSize
 - Each server dials for connections on the range 3000 - 3000 + gridSize
   - Each server dials to servers whose physIDs is less than its own physID
 
+### How connections are established
+
+a connHandler registers its conn in the connTracker when it receives a ping
+identifying the other party on the line
+
 ## Requirements
 
 - Server can be compiled with the latest version of Go

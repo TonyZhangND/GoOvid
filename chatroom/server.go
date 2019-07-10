@@ -19,7 +19,7 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	connStatus connTracker
+	connRouter connTracker
 	messageLog []string
 )
 
@@ -37,7 +37,7 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	for i := 0; i < int(gridSz); i++ {
 		knownProcesses[i] = processID(i)
 	}
-	connStatus = newConnTracker(knownProcesses)
+	connRouter = newConnTracker(knownProcesses)
 	messageLog = make([]string, 0, 100)
 }
 
@@ -62,7 +62,7 @@ func sendToMaster(msg string) {
 
 // Responds to an "alive" command from the master
 func doAlive() {
-	aliveSet := connStatus.getAlive()
+	aliveSet := connRouter.getAlive()
 	rep := make([]string, 0)
 	for _, pid := range aliveSet { // find the nodes that are up
 		rep = append(rep, strconv.Itoa(int(pid)))
@@ -80,21 +80,21 @@ func doGet() {
 
 // Responds to "broadcast" command from the master
 func doBroadcast() {
-	// TODO
+
 }
 
 // Dials for new connections to all pid <= my pid
 func dialForConnections() {
 	for shouldRun {
-		down := connStatus.getDead()
+		down := connRouter.getDead()
 		for _, pid := range down {
-			if pid <= myPhysID && !connStatus.isUp(pid) {
+			if pid <= myPhysID && !connRouter.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
 				c, err := net.DialTimeout("tcp", dialingAddr,
 					20*time.Millisecond)
 				if err == nil {
-					connStatus.markAsUp(pid, c)
-					go handleConnection(c)
+					ch := newConnHandlerKnownOther(c, pid)
+					go ch.handleConnection(c)
 				}
 			}
 		}
@@ -117,56 +117,9 @@ func listenForConnections() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		go handleConnection(c)
+		ch := newConnHandler(c)
+		go ch.handleConnection(c)
 	}
-}
-
-// TODO: Main thread for each server connection
-func handleConnection(conn net.Conn) {
-	// TODO: Spawn a failure detector
-	defer conn.Close()
-	fmt.Printf("Serving %s\n", conn.RemoteAddr().String())
-	for shouldRun {
-		data, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-		}
-		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
-		header := dataSlice[0]
-		payload := dataSlice[1]
-		fmt.Printf("Type of message: %v\n", header)
-		switch header {
-		case "ping":
-			doRcvPing(payload, conn)
-		case "msg":
-			doRcvMsg(payload)
-		default:
-			fmt.Printf("Error, Invalid msg %v from master\n", header)
-		}
-		fmt.Println("Done responding to master")
-		time.Sleep(2 * time.Second)
-	}
-}
-
-func doRcvPing(s string, conn net.Conn) {
-	sender, err := strconv.Atoi(s)
-	if err != nil {
-		fmt.Printf("Error, Invalid ping received by %v\n", myPhysID)
-		os.Exit(1)
-	}
-	// check that sender is a valid process
-	if !connStatus.isKnown(processID(sender)) {
-		fmt.Printf("Error, Invalid ping from  %v received by %v\n",
-			myPhysID, sender)
-		os.Exit(1)
-	}
-	connStatus.markAsUp(processID(sender), conn)
-}
-
-func doRcvMsg(s string) {
-	// sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
-	// sender := sSlice[0]
-	// msg := sSlice[1]
 }
 
 func main() {
