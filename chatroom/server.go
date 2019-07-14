@@ -19,7 +19,7 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	connRouter connTracker
+	linkMgr    linkManager
 	messageLog []string // TODO: this won't work; needs to be thread-safe
 )
 
@@ -37,7 +37,7 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 	for i := 0; i < int(gridSz); i++ {
 		knownProcesses[i] = processID(i)
 	}
-	connRouter = newConnTracker(knownProcesses)
+	linkMgr = newLinkManager(knownProcesses)
 	messageLog = make([]string, 0, 100)
 }
 
@@ -62,7 +62,7 @@ func sendToMaster(msg string) {
 
 // Responds to an "alive" command from the master
 func doAlive() {
-	aliveSet := connRouter.getAlive()
+	aliveSet := linkMgr.getAlive()
 	rep := make([]string, 0)
 	for _, pid := range aliveSet { // find the nodes that are up
 		rep = append(rep, strconv.Itoa(int(pid)))
@@ -87,15 +87,15 @@ func doBroadcast() {
 // Dials for new connections to all pid <= my pid
 func dialForConnections() {
 	for shouldRun {
-		down := connRouter.getDead()
+		down := linkMgr.getDead()
 		for _, pid := range down {
-			if pid <= myPhysID && !connRouter.isUp(pid) {
+			if pid <= myPhysID && !linkMgr.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
 				c, err := net.DialTimeout("tcp", dialingAddr,
 					20*time.Millisecond)
 				if err == nil {
-					ch := newConnHandlerKnownOther(c, pid)
-					go ch.handleConnection()
+					l := newLinkKnownOther(c, pid)
+					go l.handleConnection()
 				}
 			}
 		}
@@ -118,8 +118,8 @@ func listenForConnections() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		ch := newConnHandler(c)
-		go ch.handleConnection()
+		l := newLink(c)
+		go l.handleConnection()
 	}
 }
 
