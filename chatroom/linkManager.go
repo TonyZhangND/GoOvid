@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 )
 
@@ -94,7 +95,9 @@ func (lm *linkManager) isUp(pid processID) bool {
 
 // Returns a slice containing the list of up processes in lm
 func (lm *linkManager) getAlive() []processID {
+	// The comparator function for sorting a slice of processIDs
 	result := make([]processID, 0)
+	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
 	lm.RLock()
 	for pid, link := range lm.manager {
 		// find the nodes that are up
@@ -109,6 +112,7 @@ func (lm *linkManager) getAlive() []processID {
 // Returns a slice containing the list of down processes in lm
 func (lm *linkManager) getDead() []processID {
 	result := make([]processID, 0)
+	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
 	lm.RLock()
 	for pid, link := range lm.manager {
 		if link == nil {
