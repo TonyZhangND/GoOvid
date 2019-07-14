@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// A linkManager lm is a thread-safe map from processID to a connHandler object.
+// A linkManager lm is a thread-safe map from processID to a link object.
 // It is initialized as lm[p]=nil for all known processes p.
 // For each process p, when a link l is established with it,
 // we mark lm[p] = l.
@@ -23,27 +23,13 @@ const (
 // Constructor for linkManager
 // It takes a slice of all known process IDs, and initializes a
 // connTracker lm with lm[p]=nil for all p in knownProcesses.
-func newLinkManager(knownProcesses []processID) linkManager {
+func newLinkManager(knownProcesses []processID) *linkManager {
 	t := make(map[processID]*link)
 	for _, pid := range knownProcesses {
 		t[pid] = nil
 	}
-	return linkManager{manager: t}
+	return &linkManager{manager: t}
 }
-
-// // Adds process pid to the state tracker
-// func (st *connTracker) trackProcess(pid processID) {
-// 	st.RLock()
-// 	_, ok := st.tracker[pid]
-// 	st.RUnlock()
-// 	if ok {
-// 		fmt.Printf("Error: process %v already exist in the connection tracker", pid)
-// 		os.Exit(1)
-// 	}
-// 	st.Lock()
-// 	st.tracker[pid] = nil
-// 	st.Unlock()
-// }
 
 // Marks a process as down in lm and de-registers its link object
 func (lm *linkManager) markAsDown(pid processID) {

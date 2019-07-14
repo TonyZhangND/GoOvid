@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type link struct {
 	// TODO: use an enumerated type for other?
 	other    int // who's on the other end of the line. -1 if unknown
 	isActive bool
+	sync.Mutex
 }
 
 // Constructor for link where other party is unknown
@@ -64,7 +66,6 @@ func (l *link) beginPinging() {
 	for l.isActive {
 		ping := fmt.Sprintf("ping %v\n", myPhysID)
 		l.send(ping)
-		// fmt.Printf("%v sending ping to %v\n", myPhysID, l.other)
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -82,9 +83,10 @@ func (l *link) doRcvPing(s string) {
 
 // Processes a message received from the net.Conn channel
 func (l *link) doRcvMsg(s string) {
-	// sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
+	sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
 	// sender := sSlice[0]
-	// msg := sSlice[1]
+	msg := sSlice[1]
+	msgLog.appendMsg(msg)
 }
 
 // Main thread for eal server connection
@@ -97,7 +99,6 @@ func (l *link) handleConnection() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		// fmt.Printf("%v received %v", myPhysID, data)
 		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 		header := dataSlice[0]
 		payload := dataSlice[1]
@@ -109,6 +110,5 @@ func (l *link) handleConnection() {
 		default:
 			fmt.Printf("Error, Invalid msg %v from master\n", header)
 		}
-		time.Sleep(2 * time.Second)
 	}
 }

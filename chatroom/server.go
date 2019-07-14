@@ -19,8 +19,8 @@ var (
 	shouldRun  bool
 	masterConn net.Conn
 	// a set of all known servers and their perceived status
-	linkMgr    linkManager
-	messageLog []string // TODO: this won't work; needs to be thread-safe
+	linkMgr *linkManager
+	msgLog  *messageLog
 )
 
 // newServer is the constructor for server.
@@ -38,7 +38,7 @@ func initServer(pid processID, gridSz uint16, mstrPort uint16) {
 		knownProcesses[i] = processID(i)
 	}
 	linkMgr = newLinkManager(knownProcesses)
-	messageLog = make([]string, 0, 100)
+	msgLog = newMessageLog()
 }
 
 // String is the "toString" method for this server
@@ -67,7 +67,6 @@ func doAlive() {
 	for _, pid := range aliveSet { // find the nodes that are up
 		rep = append(rep, strconv.Itoa(int(pid)))
 	}
-	// TODO: Sort the alive set
 	// compose and send response to master
 	reply := "alive " + strings.Join(rep, ",")
 	sendToMaster(reply)
@@ -75,13 +74,13 @@ func doAlive() {
 
 // Responds to "get" command from the master
 func doGet() {
-	response := "messages " + strings.Join(messageLog, ",")
+	response := "messages " + strings.Join(msgLog.getMessages(), ",")
 	sendToMaster(response)
 }
 
 // Responds to "broadcast" command from the master
-func doBroadcast() {
-	// TODO
+func doBroadcast(msg string) {
+	linkMgr.broadcast(msg)
 }
 
 // Dials for new connections to all pid <= my pid
@@ -173,19 +172,19 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		command := strings.TrimSpace(data)
-		fmt.Printf("Command from master: %v\n", command)
+		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+		command := dataSlice[0]
 		switch command {
 		case "get":
 			doGet()
 		case "alive":
 			doAlive()
 		case "broadcast":
-			doBroadcast()
+			payload := dataSlice[1]
+			doBroadcast(payload)
 		default:
 			fmt.Printf("Error, invalid command %v from master\n", command)
 		}
-		fmt.Println("Done responding to master")
 	}
 	fmt.Println("Terminating")
 	os.Exit(0)
