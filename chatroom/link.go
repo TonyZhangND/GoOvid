@@ -45,11 +45,7 @@ func (l *link) close() {
 		return
 	}
 	linkMgr.markAsDown(processID(l.other))
-	err := l.conn.Close()
-	if err != nil {
-		fmt.Printf("Error closing connection by %v\n", myPhysID)
-		os.Exit(1)
-	}
+	l.conn.Close()
 }
 
 // Sends the raw string s into l.conn channel
@@ -117,6 +113,11 @@ func (l *link) handleConnection() {
 		data, err := bufio.NewReader(l.conn).ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
+		}
+		if data == "" {
+			// the connection is dead. Kill this link
+			l.close()
+			return
 		}
 		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 		header := dataSlice[0]

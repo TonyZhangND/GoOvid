@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import time
+import platform
 from socket import SOCK_STREAM, socket, AF_INET
 from threading import Thread
 
@@ -56,9 +57,11 @@ class ClientHandler(Thread):
 
     def kill(self):
         if self.valid:
-            # Not sure why the following line was here, but it throws an 
-            # exception, and removing it causes no perciptible effects.
-            # os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+            if platform.system() == 'Darwin':
+                # MacOS
+                self.send('crash\n')
+            else:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
             self.close()
 
     def send(self, s):

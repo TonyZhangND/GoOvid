@@ -185,6 +185,10 @@ func main() {
 		case "broadcast":
 			payload := dataSlice[1]
 			doBroadcast(payload)
+		case "crash":
+			// self-destruct
+			masterConn.Close()
+			os.Exit(0)
 		default:
 			fmt.Printf("Error, invalid command %v from master\n", command)
 		}
