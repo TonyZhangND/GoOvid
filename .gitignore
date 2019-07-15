@@ -2,4 +2,6 @@
 .vscode/
 GoOvid.code-workspace
 
+chatroom/test_output
+
 scratch/

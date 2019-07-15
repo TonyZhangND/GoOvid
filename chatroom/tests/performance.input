@@ -1,0 +1,18 @@
+0 start 3 10000
+1 start 3 10001
+2 start 3 10002
+1 broadcast m1
+1 broadcast m2
+1 broadcast m3
+1 broadcast m4
+1 broadcast m5
+1 broadcast m6
+1 broadcast m7
+1 broadcast m8
+1 broadcast m9
+1 broadcast m10
+sleep 1000
+0 get
+1 get
+2 get
+exit

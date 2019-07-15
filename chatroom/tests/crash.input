@@ -1,0 +1,10 @@
+0 start 3 10000
+1 start 3 10001
+2 start 3 10002
+0 alive
+1 alive
+2 alive
+0 crash
+1 alive
+2 alive
+exit

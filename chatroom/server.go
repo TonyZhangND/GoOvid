@@ -144,7 +144,7 @@ func main() {
 			"as masterPort\n", masterPort)
 		os.Exit(1)
 	}
-	if masterPort > 2999 {
+	if masterPort < 10000 {
 		fmt.Printf("Port number %d is reserved for inter-server use\n", masterPort)
 		os.Exit(1)
 	}
@@ -175,6 +175,11 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+		if data == "" {
+			// the connection is dead. Kill this server
+			shouldRun = false
+			break
+		}
 		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 		command := dataSlice[0]
 		switch command {
@@ -194,5 +199,4 @@ func main() {
 		}
 	}
 	fmt.Println("Terminating")
-	os.Exit(0)
 }

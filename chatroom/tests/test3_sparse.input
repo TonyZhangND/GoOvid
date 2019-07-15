@@ -1,0 +1,26 @@
+2 start 16 10002
+1 start 16 10001
+4 start 16 10004
+15 start 16 10015
+8 start 16 10008
+11 start 16 10011
+1 alive
+2 alive
+4 alive
+8 alive
+11 alive
+15 alive
+11 broadcast I’m actually a cat
+11 broadcast Tyrannosaurus Cat
+sleep 1000
+11 crash
+7 start 16 10007
+2 crash
+1 alive
+4 alive
+7 alive
+8 alive
+15 alive
+8 get
+7 get
+

@@ -21,7 +21,7 @@ Server id's always range from 0 - gridSize
 
 ### Port allocation
 
-- Port numbers 1024 - 2999 are reserved for master - server
+- Port numbers >= 10000 are reserved for master - server
 - Each server listens for connections on 3000 + physID
 - Each server dials for connections on the range 3000 - 3000 + gridSize
   - Each server dials to servers whose physIDs is less than its own physID
@@ -41,3 +41,6 @@ Other messages are formatted as `msg [sender] [contents]`.
 
 - Server can be compiled with the latest version of Go
 - master.py should be run with Python 2. It is incompatible with Python 3
+
+## TODO:
+- Implement a debug mode and only print in that mode

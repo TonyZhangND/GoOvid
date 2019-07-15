@@ -15,10 +15,6 @@ type linkManager struct {
 	sync.RWMutex
 }
 
-const (
-	basePort = 3000
-)
-
 // Constructor for linkManager
 // It takes a slice of all known process IDs, and initializes a
 // connTracker lm with lm[p]=nil for all p in knownProcesses.

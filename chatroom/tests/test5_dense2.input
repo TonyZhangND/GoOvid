@@ -1,0 +1,27 @@
+2 start 16 10002
+1 start 16 10001
+4 start 16 10004
+15 start 16 10015
+8 start 16 10008
+11 start 16 10011
+0 start 16 10000
+3 start 16 10003
+5 start 16 10005
+6 start 16 10006
+7 start 16 10007
+9 start 16 10009
+10 start 16 10010
+12 start 16 10012
+13 start 16 10013
+14 start 16 10014
+0 broadcast David Gries
+sleep 1000
+4 broadcast Alonzo Church
+sleep 1000
+8 broadcast Claude Shannon
+sleep 1000
+14 broadcast John von Neumann
+sleep 1000
+4 get
+7 get
+5 get

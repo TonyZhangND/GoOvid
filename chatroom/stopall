@@ -1,4 +1,3 @@
 #!/bin/bash
 
 killall ovidServer
-rm ovidServer

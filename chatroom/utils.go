@@ -6,6 +6,7 @@ import (
 )
 
 const pingInterval = 500 * time.Millisecond
+const basePort = 3000
 
 type processID uint16
 
