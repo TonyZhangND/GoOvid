@@ -18,18 +18,19 @@ type link struct {
 	// TODO: use an enumerated type for other?
 	other    int // who's on the other end of the line. -1 if unknown
 	isActive bool
+	gotPing  bool // did I receive a ping in the last pingInterval?
 	sync.Mutex
 }
 
 // Constructor for link where other party is unknown
 func newLink(c net.Conn) *link {
-	l := &link{conn: c, other: -1, isActive: true}
+	l := &link{conn: c, other: -1, isActive: true, gotPing: false}
 	return l
 }
 
 // Constructor for link where other party is known
 func newLinkKnownOther(c net.Conn, pid processID) *link {
-	l := &link{conn: c, other: int(pid), isActive: true}
+	l := &link{conn: c, other: int(pid), isActive: true, gotPing: false}
 	linkMgr.markAsUp(pid, l)
 	return l
 }
@@ -62,23 +63,40 @@ func (l *link) send(s string) {
 }
 
 // Begins sending pings into l.conn channel
-func (l *link) beginPinging() {
+func (l *link) runPinger() {
 	for l.isActive {
 		ping := fmt.Sprintf("ping %v\n", myPhysID)
 		l.send(ping)
-		time.Sleep(1 * time.Second)
+		time.Sleep(pingInterval)
+	}
+}
+
+// Failure detector: If I did not receive a ping in the last pingInterval, then
+// shut down the connection
+func (l *link) runCheckState() {
+	time.Sleep(pingInterval * 2) // initial grace period
+	for l.isActive {
+		if !l.gotPing {
+			l.close()
+			return
+		}
+		l.gotPing = false
+		time.Sleep(pingInterval * 2)
 	}
 }
 
 // Processes a ping received from the net.Conn channel
 func (l *link) doRcvPing(s string) {
-	sender, err := strconv.Atoi(s)
-	if err != nil {
-		fmt.Printf("Error, Invalid ping received by %v\n", myPhysID)
-		os.Exit(1)
+	l.gotPing = true
+	if l.other < 0 {
+		sender, err := strconv.Atoi(s)
+		if err != nil {
+			fmt.Printf("Error, Invalid ping received by %v\n", myPhysID)
+			os.Exit(1)
+		}
+		l.other = sender
+		linkMgr.markAsUp(processID(sender), l)
 	}
-	l.other = sender
-	linkMgr.markAsUp(processID(sender), l)
 }
 
 // Processes a message received from the net.Conn channel
@@ -92,7 +110,8 @@ func (l *link) doRcvMsg(s string) {
 // Main thread for eal server connection
 func (l *link) handleConnection() {
 	defer l.close()
-	go l.beginPinging()
+	go l.runPinger()
+	go l.runCheckState()
 	fmt.Printf("Serving %s\n", l.conn.RemoteAddr().String())
 	for l.isActive {
 		data, err := bufio.NewReader(l.conn).ReadString('\n')

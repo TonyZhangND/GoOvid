@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"sort"
 	"sync"
 )
 
@@ -53,9 +52,10 @@ func (lm *linkManager) markAsDown(pid processID) {
 func (lm *linkManager) markAsUp(pid processID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
-	if link != nil {
-		defer lm.RUnlock()
-		return
+	if link != nil && pid != myPhysID {
+		fmt.Printf("Error: link to %v from %v already established!",
+			pid, myPhysID)
+		os.Exit(1)
 	}
 	lm.RUnlock()
 	if !ok {
@@ -83,7 +83,6 @@ func (lm *linkManager) isUp(pid processID) bool {
 func (lm *linkManager) getAlive() []processID {
 	// The comparator function for sorting a slice of processIDs
 	result := make([]processID, 0)
-	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
 	lm.RLock()
 	for pid, link := range lm.manager {
 		// find the nodes that are up
@@ -98,7 +97,6 @@ func (lm *linkManager) getAlive() []processID {
 // Returns a slice containing the list of down processes in lm
 func (lm *linkManager) getDead() []processID {
 	result := make([]processID, 0)
-	sort.Slice(result, func(i, j int) bool { return result[i] < result[j] })
 	lm.RLock()
 	for pid, link := range lm.manager {
 		if link == nil {

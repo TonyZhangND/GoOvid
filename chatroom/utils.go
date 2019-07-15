@@ -2,7 +2,10 @@ package main
 
 import (
 	"sync"
+	"time"
 )
+
+const pingInterval = 500 * time.Millisecond
 
 type processID uint16
 

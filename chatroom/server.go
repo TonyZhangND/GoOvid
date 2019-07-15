@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -63,9 +64,11 @@ func sendToMaster(msg string) {
 // Responds to an "alive" command from the master
 func doAlive() {
 	aliveSet := linkMgr.getAlive()
-	rep := make([]string, 0)
-	for _, pid := range aliveSet { // find the nodes that are up
-		rep = append(rep, strconv.Itoa(int(pid)))
+	sort.Slice(aliveSet,
+		func(i, j int) bool { return aliveSet[i] < aliveSet[j] })
+	rep := make([]string, len(aliveSet))
+	for i, pid := range aliveSet { // find the nodes that are up
+		rep[i] = strconv.Itoa(int(pid))
 	}
 	// compose and send response to master
 	reply := "alive " + strings.Join(rep, ",")
