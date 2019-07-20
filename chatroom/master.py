@@ -122,7 +122,8 @@ def exit(force=False):
         kill(k)
     subprocess.Popen(['./stopall'], stdout=open('/dev/null', 'w'), stderr=open('/dev/null', 'w'))
     time.sleep(0.1)
-    print("Goodbye :)")
+    if debug:
+        print("Goodbye :)")
     sys.exit(0)
 
 
@@ -138,7 +139,8 @@ def main(debug=False):
     timeout_thread.setDaemon(True)
     timeout_thread.start()
 
-    print("Master started")
+    if debug:
+        print("Master started")
     while True:
         line = ''
         try:
@@ -154,7 +156,8 @@ def main(debug=False):
             continue
 
         if line == 'exit':  # exit when reading 'exit' command
-            print("Received exit command. Terminating...")
+            if debug:
+                print("Received exit command. Terminating...")
             exit()
 
         sp1 = line.split(None, 1)

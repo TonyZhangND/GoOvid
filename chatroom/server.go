@@ -12,6 +12,7 @@ import (
 )
 
 var (
+	debug      = false
 	myPhysID   processID
 	gridSize   uint16
 	masterIP   string
@@ -150,24 +151,24 @@ func main() {
 	}
 
 	// initialize server
-	fmt.Println("Launching server...")
+	debugPrintln("Launching server...")
 	initServer(processID(pid), uint16(gridSize), uint16(masterPort))
-	fmt.Println(serverInfo())
+	debugPrintln(serverInfo())
+
+	// initialize and maintain connections with peers
+	debugPrintln("Listening for peer connections")
+	go listenForConnections()
+	debugPrintln("Dialing for peer connections")
+	go dialForConnections()
 
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
-	fmt.Println("Listening for master connecting on " + masterAddr)
+	debugPrintln("Listening for master connecting on " + masterAddr)
 	mstrListener, _ := net.Listen("tcp", masterAddr)
 	mstrConn, _ := mstrListener.Accept()
 	defer mstrConn.Close()
 	masterConn = mstrConn
-	fmt.Println("Accepted master connection")
-
-	// initialize and maintain connections with peers
-	fmt.Println("Listening for peer connections")
-	go listenForConnections()
-	fmt.Println("Dialing for peer connections")
-	go dialForConnections()
+	debugPrintln("Accepted master connection")
 
 	// main loop: process commands from master
 	for shouldRun {
@@ -198,5 +199,5 @@ func main() {
 			fmt.Printf("Error, invalid command %v from master\n", command)
 		}
 	}
-	fmt.Println("Terminating")
+	debugPrintln("Terminating")
 }

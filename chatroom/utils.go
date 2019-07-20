@@ -1,14 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
 
-const pingInterval = 500 * time.Millisecond
+const pingInterval = 700 * time.Millisecond
 const basePort = 3000
 
 type processID uint16
+
+// *****  MESSAGE LOG *****
 
 type messageLog struct {
 	log []string
@@ -35,4 +38,14 @@ func (ml *messageLog) getMessages() []string {
 	}
 	ml.RUnlock()
 	return result
+}
+
+// *****  UTILITIES *****
+
+// Prints the string s if debug mode is on
+func debugPrintln(s string) {
+	if debug {
+		fmt.Printf(s)
+		fmt.Printf("\n")
+	}
 }

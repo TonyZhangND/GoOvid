@@ -19,7 +19,7 @@ for f in os.listdir(tests):
         if f[len(f) - len('.input'):] == '.input':
             fn = f[:len(f) - len('.input')]
             print(fn),
-            os.system('python master.py debug < ' + abs_f + \
+            os.system('python master.py < ' + abs_f + \
                       ' 2> ' + join(test_output, fn+'.err') + \
                       ' > ' + join(test_output, fn+'.output'))
 
