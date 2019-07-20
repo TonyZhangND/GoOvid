@@ -10,7 +10,7 @@
 8 alive
 11 alive
 15 alive
-11 broadcast I’m actually a cat
+11 broadcast I'm actually a cat
 11 broadcast Tyrannosaurus Cat
 sleep 1000
 11 crash
@@ -23,4 +23,3 @@ sleep 1000
 15 alive
 8 get
 7 get
-

@@ -112,8 +112,9 @@ func (l *link) handleConnection() {
 	go l.runPinger()
 	go l.runCheckState()
 	debugPrintln(fmt.Sprintf("Serving %s", l.conn.RemoteAddr().String()))
+	connReader := bufio.NewReader(l.conn)
 	for l.isActive {
-		data, err := bufio.NewReader(l.conn).ReadString('\n')
+		data, err := connReader.ReadString('\n')
 		if err != nil {
 			// the connection is dead. Kill this link
 			debugPrintln(

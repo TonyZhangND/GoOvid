@@ -1,0 +1,16 @@
+0 start 5 10000
+1 start 5 10001
+2 start 5 10002
+3 start 5 10003
+4 start 5 10004
+sleep 1000
+1 broadcast I'm actually a cat
+1 broadcast Tyrannosaurus Cat
+1 broadcast Stegosaurus Cat
+1 broadcast Triceratops Cat
+sleep 1000
+0 get
+1 get
+2 get
+3 get
+4 get

@@ -44,7 +44,7 @@ func (ml *messageLog) getMessages() []string {
 
 // Prints the string s if debug mode is on
 func debugPrintln(s string) {
-	if debug {
+	if debugMode {
 		fmt.Printf(s)
 		fmt.Printf("\n")
 	}

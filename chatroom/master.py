@@ -105,7 +105,6 @@ def send(index, data, set_wait_ack=False):
             wait_ack = True
         threads[pid].send(data)
         return
-
     if set_wait_ack:
         wait_ack = True
     threads[pid].send(data)

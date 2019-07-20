@@ -13,7 +13,9 @@ try:
 except:
     pass
 os.mkdir(test_output)
-for f in os.listdir(tests):
+test_list = os.listdir(tests)
+test_list.sort()
+for f in test_list:
     abs_f = join(tests, f)
     if isfile(abs_f):
         if f[len(f) - len('.input'):] == '.input':

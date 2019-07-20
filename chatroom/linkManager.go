@@ -36,7 +36,7 @@ func (lm *linkManager) markAsDown(pid processID) {
 	}
 	lm.RUnlock()
 	if !ok {
-		fmt.Printf("Error: process %v does not exist in failure detector", pid)
+		fmt.Printf("Error markAsDown called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
 		os.Exit(1)
 	}
 	lm.Lock()
@@ -49,13 +49,13 @@ func (lm *linkManager) markAsUp(pid processID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if link != nil && pid != myPhysID {
-		fmt.Printf("Error: link to %v from %v already established!",
+		fmt.Printf("Error: link to %v from %v already established!\n",
 			pid, myPhysID)
 		os.Exit(1)
 	}
 	lm.RUnlock()
 	if !ok {
-		fmt.Printf("Error: process %v does not exist in failure detector", pid)
+		fmt.Printf("Error markAsUp called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
 		os.Exit(1)
 	}
 	lm.Lock()
@@ -68,7 +68,7 @@ func (lm *linkManager) isUp(pid processID) bool {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if !ok {
-		fmt.Printf("Error: process %v does not exist in failure detector", pid)
+		fmt.Printf("Error isUp called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
 		os.Exit(1)
 	}
 	defer lm.RUnlock()

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	debug      = false
+	debugMode  = false
 	myPhysID   processID
 	gridSize   uint16
 	masterIP   string
@@ -171,8 +171,9 @@ func main() {
 	debugPrintln("Accepted master connection")
 
 	// main loop: process commands from master
+	connReader := bufio.NewReader(masterConn)
 	for shouldRun {
-		data, err := bufio.NewReader(masterConn).ReadString('\n')
+		data, err := connReader.ReadString('\n')
 		if err != nil {
 			fmt.Printf("Error: Broken connection from master: %v\n", err)
 			shouldRun = false
