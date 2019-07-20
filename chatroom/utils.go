@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -45,7 +47,13 @@ func (ml *messageLog) getMessages() []string {
 // Prints the string s if debug mode is on
 func debugPrintln(s string) {
 	if debugMode {
-		fmt.Printf(s)
-		fmt.Printf("\n")
+		fmt.Printf("%v\n", s)
 	}
+}
+
+func fatalError(errMsg string) {
+	shouldRun = false
+	fmt.Printf("Error : process %v : %v\n", myPhysID, errMsg)
+	debug.PrintStack()
+	os.Exit(1)
 }

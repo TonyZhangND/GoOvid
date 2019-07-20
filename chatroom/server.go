@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	debugMode  = false
+	debugMode  = true
 	myPhysID   processID
 	gridSize   uint16
 	masterIP   string
@@ -57,8 +57,9 @@ func serverInfo() string {
 func sendToMaster(msg string) {
 	_, err := masterConn.Write([]byte(msg + "\n"))
 	if err != nil {
-		fmt.Printf("Error occured while sending msg '%v' to master: %v",
+		errMsg := fmt.Sprintf("Can't send msg '%v' to master: %v",
 			msg, err)
+		fatalError(errMsg)
 	}
 }
 
@@ -132,13 +133,13 @@ func main() {
 	gridSize, err2 := strconv.ParseUint(os.Args[2], 10, 16)
 	masterPort, err3 := strconv.ParseUint(os.Args[3], 10, 16)
 	if err1 != nil || err2 != nil || err3 != nil {
-		fmt.Printf("Errors occured while processing arguments.\n"+
+		errMsg := fmt.Sprintf("Errors occured while processing arguments.\n"+
 			"PhysID: %v\n"+
 			"gridSize: %v\n"+
 			"masterPort: %v\n"+
 			"Program exiting...\n",
 			err1, err2, err3)
-		os.Exit(1)
+		fatalError(errMsg)
 	}
 	if masterPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
@@ -146,7 +147,8 @@ func main() {
 		os.Exit(1)
 	}
 	if masterPort < 10000 {
-		fmt.Printf("Port number %d is reserved for inter-server use\n", masterPort)
+		fmt.Printf("Port number %d is reserved for inter-server use\n",
+			masterPort)
 		os.Exit(1)
 	}
 
@@ -175,8 +177,7 @@ func main() {
 	for shouldRun {
 		data, err := connReader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("Error: Broken connection from master: %v\n", err)
-			shouldRun = false
+			fatalError("Broken connection from master")
 			break
 		}
 		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
@@ -194,7 +195,8 @@ func main() {
 			masterConn.Close()
 			os.Exit(0)
 		default:
-			fmt.Printf("Error, invalid command %v from master\n", command)
+			msg := fmt.Sprintf("invalid command %v from master", command)
+			debugPrintln(msg)
 		}
 	}
 	debugPrintln("Terminating")

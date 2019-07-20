@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,8 +54,8 @@ func (l *link) send(s string) {
 	if err != nil {
 		debugPrintln(
 			fmt.Sprintf(
-				"Error sending msg %v. Closing connection\n",
-				s))
+				"Send %v from %v to %v failed. Closing connection\n",
+				s, myPhysID, l.other))
 		l.close()
 	}
 }
@@ -90,8 +89,8 @@ func (l *link) doRcvPing(s string) {
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
 		if err != nil {
-			fmt.Printf("Error, Invalid ping received by %v\n", myPhysID)
-			os.Exit(1)
+			errMsg := fmt.Sprintf("Invalid ping %v", s)
+			fatalError(errMsg)
 		}
 		l.other = sender
 		linkMgr.markAsUp(processID(sender), l)
@@ -133,7 +132,7 @@ func (l *link) handleConnection() {
 		case "msg":
 			l.doRcvMsg(payload)
 		default:
-			fmt.Printf("Error, Invalid msg %v from master\n", header)
+			debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
 		}
 	}
 }

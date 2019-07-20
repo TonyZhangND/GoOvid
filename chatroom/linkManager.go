@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sync"
 )
 
@@ -36,8 +35,9 @@ func (lm *linkManager) markAsDown(pid processID) {
 	}
 	lm.RUnlock()
 	if !ok {
-		fmt.Printf("Error markAsDown called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
-		os.Exit(1)
+		errMsg := fmt.Sprintf(
+			"Process %v does not exist in failure detector", pid)
+		fatalError(errMsg)
 	}
 	lm.Lock()
 	lm.manager[pid] = nil
@@ -49,14 +49,14 @@ func (lm *linkManager) markAsUp(pid processID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if link != nil && pid != myPhysID {
-		fmt.Printf("Error: link to %v from %v already established!\n",
-			pid, myPhysID)
-		os.Exit(1)
+		errMsg := fmt.Sprintf("Link to %v already established!", pid)
+		fatalError(errMsg)
 	}
 	lm.RUnlock()
 	if !ok {
-		fmt.Printf("Error markAsUp called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
-		os.Exit(1)
+		errMsg := fmt.Sprintf(
+			"Process %v does not exist in failure detector", pid)
+		fatalError(errMsg)
 	}
 	lm.Lock()
 	lm.manager[pid] = handler
@@ -68,8 +68,9 @@ func (lm *linkManager) isUp(pid processID) bool {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if !ok {
-		fmt.Printf("Error isUp called by %v: process %v does not exist in failure detector\n", myPhysID, pid)
-		os.Exit(1)
+		errMsg := fmt.Sprintf(
+			"Process %v does not exist in failure detector", pid)
+		fatalError(errMsg)
 	}
 	defer lm.RUnlock()
 	return link != nil
