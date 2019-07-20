@@ -53,7 +53,10 @@ func (l *link) close() {
 func (l *link) send(s string) {
 	_, err := l.conn.Write([]byte(string(s)))
 	if err != nil {
-		fmt.Printf("Error sending msg %v. Closing connection\n", s)
+		debugPrintln(
+			fmt.Sprintf(
+				"Error sending msg %v. Closing connection\n",
+				s))
 		l.close()
 	}
 }
@@ -113,6 +116,10 @@ func (l *link) handleConnection() {
 		data, err := bufio.NewReader(l.conn).ReadString('\n')
 		if err != nil {
 			// the connection is dead. Kill this link
+			debugPrintln(
+				fmt.Sprintf(
+					"Process %v lost connection with %v",
+					myPhysID, l.other))
 			l.close()
 			return
 		}

@@ -174,10 +174,7 @@ func main() {
 	for shouldRun {
 		data, err := bufio.NewReader(masterConn).ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
-		}
-		if data == "" {
-			// the connection is dead. Kill this server
+			fmt.Printf("Error: Broken connection from master: %v\n", err)
 			shouldRun = false
 			break
 		}
