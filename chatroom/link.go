@@ -105,7 +105,7 @@ func (l *link) doRcvMsg(s string) {
 	msgLog.appendMsg(msg)
 }
 
-// Main thread for eal server connection
+// Main thread for server-server connection
 func (l *link) handleConnection() {
 	defer l.close()
 	go l.runPinger()
