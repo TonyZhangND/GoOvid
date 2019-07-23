@@ -17,19 +17,18 @@ type link struct {
 	// TODO: use an enumerated type for other?
 	other    int // who's on the other end of the line. -1 if unknown
 	isActive bool
-	gotPing  bool // did I receive a ping in the last pingInterval?
 	sync.Mutex
 }
 
 // Constructor for link where other party is unknown
 func newLink(c net.Conn) *link {
-	l := &link{conn: c, other: -1, isActive: true, gotPing: false}
+	l := &link{conn: c, other: -1, isActive: true}
 	return l
 }
 
 // Constructor for link where other party is known
 func newLinkKnownOther(c net.Conn, pid processID) *link {
-	l := &link{conn: c, other: int(pid), isActive: true, gotPing: false}
+	l := &link{conn: c, other: int(pid), isActive: true}
 	linkMgr.markAsUp(pid, l)
 	return l
 }
@@ -69,23 +68,8 @@ func (l *link) runPinger() {
 	}
 }
 
-// Failure detector: If I did not receive a ping in the last pingInterval, then
-// shut down the connection
-func (l *link) runCheckState() {
-	time.Sleep(pingInterval * 2) // initial grace period
-	for l.isActive {
-		if !l.gotPing {
-			l.close()
-			return
-		}
-		l.gotPing = false
-		time.Sleep(pingInterval * 2)
-	}
-}
-
 // Processes a ping received from the net.Conn channel
 func (l *link) doRcvPing(s string) {
-	l.gotPing = true
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
 		if err != nil {
@@ -109,30 +93,39 @@ func (l *link) doRcvMsg(s string) {
 func (l *link) handleConnection() {
 	defer l.close()
 	go l.runPinger()
-	go l.runCheckState()
 	debugPrintln(fmt.Sprintf("Serving %s", l.conn.RemoteAddr().String()))
 	connReader := bufio.NewReader(l.conn)
+	inChan := make(chan string)
+	go func() {
+		for l.isActive {
+			data, err := connReader.ReadString('\n')
+			if err != nil {
+				// the connection is dead. Kill this link
+				debugPrintln(
+					fmt.Sprintf("Process %v lost connection with %v", myPhysID, l.other))
+				l.close()
+				return
+			}
+			inChan <- data
+		}
+	}()
 	for l.isActive {
-		data, err := connReader.ReadString('\n')
-		if err != nil {
-			// the connection is dead. Kill this link
-			debugPrintln(
-				fmt.Sprintf(
-					"Process %v lost connection with %v",
-					myPhysID, l.other))
+		select {
+		case data := <-inChan:
+			dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+			header := dataSlice[0]
+			payload := dataSlice[1]
+			switch header {
+			case "ping":
+				l.doRcvPing(payload)
+			case "msg":
+				l.doRcvMsg(payload)
+			default:
+				debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
+			}
+		case <-time.After(pingInterval * 2):
 			l.close()
 			return
-		}
-		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
-		header := dataSlice[0]
-		payload := dataSlice[1]
-		switch header {
-		case "ping":
-			l.doRcvPing(payload)
-		case "msg":
-			l.doRcvMsg(payload)
-		default:
-			debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
 		}
 	}
 }
