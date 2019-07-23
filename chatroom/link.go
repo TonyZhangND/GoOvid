@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -15,20 +14,20 @@ import (
 type link struct {
 	conn net.Conn
 	// TODO: use an enumerated type for other?
-	other    int // who's on the other end of the line. -1 if unknown
-	isActive bool
-	sync.Mutex
+	other         int // who's on the other end of the line. -1 if unknown
+	isActive      bool
+	serverOutChan chan string // used to stream messages to main server loop
 }
 
 // Constructor for link where other party is unknown
-func newLink(c net.Conn) *link {
-	l := &link{conn: c, other: -1, isActive: true}
+func newLink(c net.Conn, sOutChan chan string) *link {
+	l := &link{conn: c, other: -1, isActive: true, serverOutChan: sOutChan}
 	return l
 }
 
 // Constructor for link where other party is known
-func newLinkKnownOther(c net.Conn, pid processID) *link {
-	l := &link{conn: c, other: int(pid), isActive: true}
+func newLinkKnownOther(c net.Conn, pid processID, sOutChan chan string) *link {
+	l := &link{conn: c, other: int(pid), isActive: true, serverOutChan: sOutChan}
 	linkMgr.markAsUp(pid, l)
 	return l
 }
@@ -53,8 +52,8 @@ func (l *link) send(s string) {
 	if err != nil {
 		debugPrintln(
 			fmt.Sprintf(
-				"Send %v from %v to %v failed. Closing connection\n",
-				s, myPhysID, l.other))
+				"Send %v to %v failed. Closing connection\n",
+				s, l.other))
 		l.close()
 	}
 }
@@ -73,20 +72,11 @@ func (l *link) doRcvPing(s string) {
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
 		if err != nil {
-			errMsg := fmt.Sprintf("Invalid ping %v", s)
-			fatalError(errMsg)
+			fatalError(fmt.Sprintf("Invalid ping %v", s))
 		}
 		l.other = sender
 		linkMgr.markAsUp(processID(sender), l)
 	}
-}
-
-// Processes a message received from the net.Conn channel
-func (l *link) doRcvMsg(s string) {
-	sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
-	// sender := sSlice[0]
-	msg := sSlice[1]
-	msgLog.appendMsg(msg)
 }
 
 // Main thread for server-server connection
@@ -102,7 +92,7 @@ func (l *link) handleConnection() {
 			if err != nil {
 				// the connection is dead. Kill this link
 				debugPrintln(
-					fmt.Sprintf("Process %v lost connection with %v", myPhysID, l.other))
+					fmt.Sprintf("Lost connection with %v", l.other))
 				l.close()
 				return
 			}
@@ -119,7 +109,10 @@ func (l *link) handleConnection() {
 			case "ping":
 				l.doRcvPing(payload)
 			case "msg":
-				l.doRcvMsg(payload)
+				sSlice := strings.SplitN(strings.TrimSpace(payload), " ", 2)
+				// sender := sSlice[0]
+				msg := sSlice[1]
+				l.serverOutChan <- msg
 			default:
 				debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
 			}

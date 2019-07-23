@@ -147,7 +147,7 @@ func (lm *linkManager) dialForConnections() {
 				c, err := net.DialTimeout("tcp", dialingAddr,
 					20*time.Millisecond)
 				if err == nil {
-					l := newLinkKnownOther(c, pid)
+					l := newLinkKnownOther(c, pid, lm.serverOutChan)
 					go l.handleConnection()
 				}
 			}
@@ -172,7 +172,7 @@ func (lm *linkManager) listenForConnections() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		l := newLink(c)
+		l := newLink(c, lm.serverOutChan)
 		go l.handleConnection()
 	}
 }
@@ -182,8 +182,14 @@ func (lm *linkManager) connectAndHandleMaster() {
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
 	debugPrintln("Listening for master connecting on " + masterAddr)
-	mstrListener, _ := net.Listen("tcp", masterAddr)
-	mstrConn, _ := mstrListener.Accept()
+	mstrListener, err := net.Listen("tcp", masterAddr)
+	if err != nil {
+		fatalError("Error connecting to master")
+	}
+	mstrConn, err := mstrListener.Accept()
+	if err != nil {
+		fatalError("Error connecting to master")
+	}
 	lm.masterConn = mstrConn
 	debugPrintln("Accepted master connection")
 	// main loop: process commands from master as async goroutine

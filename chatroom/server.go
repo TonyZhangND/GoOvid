@@ -90,14 +90,13 @@ func handleMasterMsg(data string) {
 		// self-destruct
 		os.Exit(0)
 	default:
-		msg := fmt.Sprintf("invalid command %v from master", command)
+		msg := fmt.Sprintf("Invalid command %v from master", command)
 		debugPrintln(msg)
 	}
 }
 
-// TODO
 func handleServerMsg(data string) {
-
+	msgLog.appendMsg(data)
 }
 
 func main() {
