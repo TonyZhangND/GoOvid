@@ -12,7 +12,7 @@ import (
 // A linkManager lm is a thread-safe map from processID to a link object.
 // It is initialized as lm[p]=nil for all known processes p.
 // For each process p, when a link l is established with it,
-// we mark lm[p] = l.
+// we mark lm[p] = l, except lm[myPhysId] = nil
 type linkManager struct {
 	manager       map[processID]*link
 	masterConn    net.Conn
@@ -95,6 +95,7 @@ func (lm *linkManager) getAlive() []processID {
 			result = append(result, pid)
 		}
 	}
+	result = append(result, myPhysID) // Cogito ergo sum
 	defer lm.RUnlock()
 	return result
 }
@@ -104,7 +105,7 @@ func (lm *linkManager) getDead() []processID {
 	result := make([]processID, 0)
 	lm.RLock()
 	for pid, link := range lm.manager {
-		if link == nil {
+		if link == nil && pid != myPhysID { // cogito ergo sum
 			result = append(result, pid)
 		}
 	}
@@ -115,6 +116,7 @@ func (lm *linkManager) getDead() []processID {
 // Sends msg on all channels.
 // Applies Ovid message format and headers
 func (lm *linkManager) broadcast(msg string) {
+	lm.serverOutChan <- msg // first send to myself
 	s := fmt.Sprintf("msg %v %s\n", myPhysID, msg)
 	lm.RLock()
 	for _, link := range lm.manager {
@@ -142,7 +144,7 @@ func (lm *linkManager) dialForConnections() {
 	for shouldRun {
 		down := linkMgr.getDead()
 		for _, pid := range down {
-			if pid <= myPhysID && !linkMgr.isUp(pid) {
+			if pid < myPhysID && !linkMgr.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
 				c, err := net.DialTimeout("tcp", dialingAddr,
 					20*time.Millisecond)

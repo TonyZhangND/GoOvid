@@ -131,14 +131,22 @@ func main() {
 	initAndRunServer(processID(pid), uint16(gridSize), uint16(masterPort),
 		serverInChan, masterInChan)
 	debugPrintln(serverInfo())
-
-	for shouldRun {
-		select {
-		case masterData := <-masterInChan:
-			handleMasterMsg(masterData)
-		case serverData := <-serverInChan:
-			handleServerMsg(serverData)
+	go func() {
+		// There is an important reason why this is a separate goroutine,
+		// rather than within a select block together with serverInChan.
+		// Because a broadcast includes pushing into serverInChan,
+		// handleMasterMessage may block, resulting in a deadlock. In fact,
+		// while a buffered channel can defer such a deadlock, the deadlock
+		// will inevitably remain a reachable execution. The solution is
+		// what I have here -- decouple the synchrony between the two channels.
+		// Naively, one could do `go handleMasterMsg(<-masterInChan)`,
+		// but that breaks FIFO ordering
+		for shouldRun {
+			handleMasterMsg(<-masterInChan)
 		}
+	}()
+	for shouldRun {
+		handleServerMsg(<-serverInChan)
 	}
 	debugPrintln("Terminating")
 }
