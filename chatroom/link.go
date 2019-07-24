@@ -1,5 +1,10 @@
 package main
 
+// This file contains the definition and methods of the link object.
+// A link is a wrapper for the TCP connection between two servers.
+// It is responsible for maintaining and monitoring the health of the
+// connection.
+
 import (
 	"bufio"
 	"fmt"
@@ -14,8 +19,8 @@ import (
 type link struct {
 	conn net.Conn
 	// TODO: use an enumerated type for other?
-	other         int // who's on the other end of the line. -1 if unknown
-	isActive      bool
+	other         int         // who's on the other end of the line. -1 if unknown
+	isActive      bool        // loop condition for the link's routines
 	serverOutChan chan string // used to stream messages to main server loop
 }
 
@@ -35,7 +40,7 @@ func newLinkKnownOther(c net.Conn, pid processID, sOutChan chan string) *link {
 // Close this link. There are a few things to take care of
 // 1. Mark myself as inactive to terminate all my infinite loops
 // 2. Mark my connection as down
-// 3. Close my net.Conn lannel
+// 3. Close my net.Conn channel
 func (l *link) close() {
 	l.isActive = false
 	if l.other < 0 {
@@ -91,8 +96,7 @@ func (l *link) handleConnection() {
 			data, err := connReader.ReadString('\n')
 			if err != nil {
 				// the connection is dead. Kill this link
-				debugPrintln(
-					fmt.Sprintf("Lost connection with %v", l.other))
+				debugPrintln(fmt.Sprintf("Lost connection with %v", l.other))
 				l.close()
 				return
 			}

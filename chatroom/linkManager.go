@@ -1,5 +1,10 @@
 package main
 
+// This file contains the definition and methods of the linkManager object.
+// A linkManager acts as a networking interface for an Ovid server.
+// It manages all active links, and contains methods to query the state
+// of the network.
+
 import (
 	"bufio"
 	"fmt"
@@ -9,15 +14,18 @@ import (
 	"time"
 )
 
-// A linkManager lm is a thread-safe map from processID to a link object.
-// It is initialized as lm[p]=nil for all known processes p.
-// For each process p, when a link l is established with it,
-// we mark lm[p] = l, except lm[myPhysId] = nil
+// A linkManager lm implements a thread-safe map from processID
+// to a link object. It is initialized as lm[p]=nil for all known
+// processes p. For each process p != myPhysId, when a link l is
+// established with it, we mark lm[p] = l.
+// It also maintains the connection with the master program
+// Note: always lm[myPhysId] = nil, since a server does not need a link
+// with itself.
 type linkManager struct {
 	manager       map[processID]*link
-	masterConn    net.Conn
-	serverOutChan chan string // used to stream messages to main server loop
-	masterOutChan chan string // used to stream messages to main server loop
+	masterConn    net.Conn    // connection with the master program
+	serverOutChan chan string // used to stream server messages to main server loop
+	masterOutChan chan string // used to stream master messages to main server loop
 	sync.RWMutex
 }
 
@@ -52,7 +60,7 @@ func (lm *linkManager) markAsDown(pid processID) {
 	lm.Unlock()
 }
 
-// Marks a process as up in lm and register its link object
+// Marks a process as up in lm and registers its link object
 func (lm *linkManager) markAsUp(pid processID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
@@ -85,7 +93,7 @@ func (lm *linkManager) isUp(pid processID) bool {
 }
 
 // Returns a slice containing the list of up processes in lm
-func (lm *linkManager) getAlive() []processID {
+func (lm *linkManager) getAllUp() []processID {
 	// The comparator function for sorting a slice of processIDs
 	result := make([]processID, 0)
 	lm.RLock()
@@ -101,7 +109,7 @@ func (lm *linkManager) getAlive() []processID {
 }
 
 // Returns a slice containing the list of down processes in lm
-func (lm *linkManager) getDead() []processID {
+func (lm *linkManager) getAllDown() []processID {
 	result := make([]processID, 0)
 	lm.RLock()
 	for pid, link := range lm.manager {
@@ -128,7 +136,7 @@ func (lm *linkManager) broadcast(msg string) {
 	return
 }
 
-// sendToMaster sends msg string to the master
+// Sends msg string to the master
 func (lm *linkManager) sendToMaster(msg string) {
 	_, err := lm.masterConn.Write([]byte(msg + "\n"))
 	if err != nil {
@@ -138,11 +146,11 @@ func (lm *linkManager) sendToMaster(msg string) {
 	}
 }
 
-// Dials for new connections to all pid <= my pid
+// Dials for new connections to all pid < my pid
 func (lm *linkManager) dialForConnections() {
 	debugPrintln("Dialing for peer connections")
 	for shouldRun {
-		down := linkMgr.getDead()
+		down := linkMgr.getAllDown()
 		for _, pid := range down {
 			if pid < myPhysID && !linkMgr.isUp(pid) {
 				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
@@ -179,7 +187,7 @@ func (lm *linkManager) listenForConnections() {
 	}
 }
 
-// Connect to and handle the master
+// Connects to and handles the master
 func (lm *linkManager) connectAndHandleMaster() {
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
@@ -195,7 +203,6 @@ func (lm *linkManager) connectAndHandleMaster() {
 	lm.masterConn = mstrConn
 	debugPrintln("Accepted master connection")
 	// main loop: process commands from master as async goroutine
-	// This allows main server loop to progress only after the master has connected
 	go func() {
 		defer lm.masterConn.Close()
 		connReader := bufio.NewReader(lm.masterConn)
@@ -214,4 +221,7 @@ func (lm *linkManager) run() {
 	go lm.dialForConnections()
 	go lm.listenForConnections()
 	lm.connectAndHandleMaster()
+	// Rather than running connectAndHandleMaster() as an async goroutine,
+	// we defer the goroutine to within connectAndHandleMaster(). This forces
+	// the main server loop to progress only after the master has connected.
 }

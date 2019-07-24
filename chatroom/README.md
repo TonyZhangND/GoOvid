@@ -17,11 +17,31 @@ Notably, the original Ovid as implemented in C, using libuv as the messaging sub
 For the present work, I'm going to write my own layer in Go, mainly because libuv seems like
 overkill, and I want practice working with my own sockets. 
 
+The goal is design a system that is clean, extensible, well-documented, and leverages
+the features of the beautiful language that is Go.
+
+## Specifications
+
+I will follow the exact specifications in chatroom.pdf. The program should be 
+able to run using master.py
+
+Each server has a physical id, and they always range from 0 - gridSize.
+
+Each server maintains a connection with the master. Links between servers
+form a complete graph.
+
+## Architecture
+
+There are three logical components of a server
+1. The **server** (server.go) houses the main logic of an Ovid server. In particular, it is the central location where actions are triggered by incoming messages.
+2. The **linkManager** acts as a networking interface for an Ovid server. It manages all active links, and contains methods to query the state of the network.
+3. The **link** represents a connection between two servers. It is responsible for maintaining and monitoring the health of the connection.
+
 ## Usage
 
 Detailed usage and program behavior descriptions can be found in chatroom.pdf. 
 
-In addition, the following command runs a test suit
+In addition, the following command runs a test suite
 
 ```
 python2 grading.py
@@ -37,24 +57,13 @@ Also, the following command
 ```
 kills all Ovid, master.py and grading.py processes.
 
-## Specifications
-
-I will follow the exact specifications in chatroom.pdf. The program should be 
-able to run using master.py
-
-Each server has a physical id, and they always range from 0 - gridSize.
-
-Each server maintains a connection with the master. Links between servers
-form a complete graph.
-
-
 ### Port allocation
 
 - Port numbers >= 10000 are reserved for master - server
 - Ports 3000 to 3000 + gridSz are used for inter-server links
 - Each server listens for connections on 3000 + physID
-- Each server dials for connections on the range 3000 - 3000 + gridSize
-- Each server dials to servers whose physIDs is less than its own physID
+- Each server listens for connections on the range 3000 - 3000 + gridSize
+- Each server dials to servers whose physIDs is strictly less than its own physID
 
 ### Messaging format
 

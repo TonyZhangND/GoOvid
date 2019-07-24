@@ -1,5 +1,9 @@
 package main
 
+// This file contains the definition and main logic of an Ovid server.
+// In particular, this is the central location where actions are
+// triggered by incoming messages.
+
 import (
 	"fmt"
 	"os"
@@ -15,14 +19,12 @@ var (
 	masterIP   string
 	masterPort uint16
 	gridIP     string
-	shouldRun  bool
-	// a set of all known servers and their perceived status
-	linkMgr *linkManager
-	msgLog  *messageLog
+	shouldRun  bool // loop condition for the server's routines
+	linkMgr    *linkManager
+	msgLog     *messageLog
 )
 
-// newServer is the constructor for server.
-// It returns a server struct with default values for some fields.
+// Populates the global variables and starts the linkManager
 func initAndRunServer(pid processID, gridSz uint16,
 	mstrPort uint16, serverInChan chan string, masterInChan chan string) {
 	myPhysID = pid
@@ -40,8 +42,7 @@ func initAndRunServer(pid processID, gridSz uint16,
 	linkMgr.run()
 }
 
-// String is the "toString" method for this server
-// It returns a string describing this server
+// Returns a string describing this server
 func serverInfo() string {
 	return fmt.Sprintf("* GoOvid server *\n"+
 		"physID: %d\n"+
@@ -52,7 +53,7 @@ func serverInfo() string {
 
 // Responds to an "alive" command from the master
 func doAlive() {
-	aliveSet := linkMgr.getAlive()
+	aliveSet := linkMgr.getAllUp()
 	sort.Slice(aliveSet,
 		func(i, j int) bool { return aliveSet[i] < aliveSet[j] })
 	rep := make([]string, len(aliveSet))
@@ -75,6 +76,7 @@ func doBroadcast(msg string) {
 	linkMgr.broadcast(msg)
 }
 
+// Handles messages from the master
 func handleMasterMsg(data string) {
 	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 	command := dataSlice[0]
@@ -95,6 +97,7 @@ func handleMasterMsg(data string) {
 	}
 }
 
+// Handles messages from a server
 func handleServerMsg(data string) {
 	msgLog.appendMsg(data)
 }
@@ -131,6 +134,8 @@ func main() {
 	initAndRunServer(processID(pid), uint16(gridSize), uint16(masterPort),
 		serverInChan, masterInChan)
 	debugPrintln(serverInfo())
+
+	// main loop
 	go func() {
 		// There is an important reason why this is a separate goroutine,
 		// rather than within a select block together with serverInChan.
