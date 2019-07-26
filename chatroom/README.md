@@ -25,7 +25,7 @@ the features of the beautiful language that is Go.
 I will follow the exact specifications in chatroom.pdf. The program should be 
 able to run using master.py
 
-Each server has a physical id, and they always range from 0 - gridSize.
+Each server has a physical id, and they always range from `0 - gridSize`.
 
 Each server maintains a connection with the master. Links between servers
 form a complete graph.
@@ -41,13 +41,13 @@ There are three logical components of a server
 
 Detailed usage and program behavior descriptions can be found in chatroom.pdf. 
 
-In addition, the following command runs a test suite
+In addition, the following command executes a test suite
 
 ```
 python2 grading.py
 ```
 
-which runs all the master scripts in the tests/ directory, comparing the actual output 
+that runs all the master scripts in the tests/ directory, comparing the actual output 
 with the desired output for each test case.
 
 Also, the following command
@@ -59,10 +59,10 @@ kills all Ovid, master.py and grading.py processes.
 
 ### Port allocation
 
-- Port numbers >= 10000 are reserved for master - server
-- Ports 3000 to 3000 + gridSz are used for inter-server links
-- Each server listens for connections on 3000 + physID
-- Each server listens for connections on the range 3000 - 3000 + gridSize
+- Port numbers >= `10000` are reserved for master - server
+- Ports `3000 to 3000 + gridSz` are used for inter-server links
+- Each server listens for connections on `3000 + physID`
+- Each server listens for connections on the range `3000 - 3000 + gridSz`
 - Each server dials to servers whose physIDs is strictly less than its own physID
 
 ### Messaging format
