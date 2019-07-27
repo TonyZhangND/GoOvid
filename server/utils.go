@@ -15,15 +15,15 @@ const basePort = 3000
 
 type processID uint16
 
-// Prints the string s if debug mode is on
-func debugPrintln(s string) {
+// DebugPrintln prints the string s if debug mode is on
+func DebugPrintln(s string) {
 	if debugMode {
 		fmt.Printf("Process %v : %v\n", myPhysID, s)
 	}
 }
 
-// Prints the error messange and kills the program
-func fatalError(errMsg string) {
+// FatalError prints the error messange and kills the program
+func FatalError(errMsg string) {
 	shouldRun = false
 	fmt.Printf("Error : process %v : %v\n", myPhysID, errMsg)
 	debug.PrintStack()
