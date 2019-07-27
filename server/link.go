@@ -1,12 +1,16 @@
 package server
 
+// This file contains the definition and methods of the link object.
+// A link is a wrapper for the TCP connection between two servers.
+// It is responsible for maintaining and monitoring the health of the
+// connection.
+
 import (
 	"bufio"
 	"fmt"
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -15,21 +19,20 @@ import (
 type link struct {
 	conn net.Conn
 	// TODO: use an enumerated type for other?
-	other    int // who's on the other end of the line. -1 if unknown
-	isActive bool
-	gotPing  bool // did I receive a ping in the last pingInterval?
-	sync.Mutex
+	other         int         // who's on the other end of the line. -1 if unknown
+	isActive      bool        // loop condition for the link's routines
+	serverOutChan chan string // used to stream messages to main server loop
 }
 
 // Constructor for link where other party is unknown
-func newLink(c net.Conn) *link {
-	l := &link{conn: c, other: -1, isActive: true, gotPing: false}
+func newLink(c net.Conn, sOutChan chan string) *link {
+	l := &link{conn: c, other: -1, isActive: true, serverOutChan: sOutChan}
 	return l
 }
 
 // Constructor for link where other party is known
-func newLinkKnownOther(c net.Conn, pid processID) *link {
-	l := &link{conn: c, other: int(pid), isActive: true, gotPing: false}
+func newLinkKnownOther(c net.Conn, pid processID, sOutChan chan string) *link {
+	l := &link{conn: c, other: int(pid), isActive: true, serverOutChan: sOutChan}
 	linkMgr.markAsUp(pid, l)
 	return l
 }
@@ -37,7 +40,7 @@ func newLinkKnownOther(c net.Conn, pid processID) *link {
 // Close this link. There are a few things to take care of
 // 1. Mark myself as inactive to terminate all my infinite loops
 // 2. Mark my connection as down
-// 3. Close my net.Conn lannel
+// 3. Close my net.Conn channel
 func (l *link) close() {
 	l.isActive = false
 	if l.other < 0 {
@@ -54,8 +57,8 @@ func (l *link) send(s string) {
 	if err != nil {
 		debugPrintln(
 			fmt.Sprintf(
-				"Send %v from %v to %v failed. Closing connection\n",
-				s, myPhysID, l.other))
+				"Send %v to %v failed. Closing connection\n",
+				s, l.other))
 		l.close()
 	}
 }
@@ -69,70 +72,57 @@ func (l *link) runPinger() {
 	}
 }
 
-// Failure detector: If I did not receive a ping in the last pingInterval, then
-// shut down the connection
-func (l *link) runCheckState() {
-	time.Sleep(pingInterval * 2) // initial grace period
-	for l.isActive {
-		if !l.gotPing {
-			l.close()
-			return
-		}
-		l.gotPing = false
-		time.Sleep(pingInterval * 2)
-	}
-}
-
 // Processes a ping received from the net.Conn channel
 func (l *link) doRcvPing(s string) {
-	l.gotPing = true
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
 		if err != nil {
-			errMsg := fmt.Sprintf("Invalid ping %v", s)
-			fatalError(errMsg)
+			fatalError(fmt.Sprintf("Invalid ping %v", s))
 		}
 		l.other = sender
 		linkMgr.markAsUp(processID(sender), l)
 	}
 }
 
-// Processes a message received from the net.Conn channel
-func (l *link) doRcvMsg(s string) {
-	sSlice := strings.SplitN(strings.TrimSpace(s), " ", 2)
-	// sender := sSlice[0]
-	msg := sSlice[1]
-	msgLog.appendMsg(msg)
-}
-
-// Main thread for eal server connection
+// Main thread for server-server connection
 func (l *link) handleConnection() {
 	defer l.close()
 	go l.runPinger()
-	go l.runCheckState()
 	debugPrintln(fmt.Sprintf("Serving %s", l.conn.RemoteAddr().String()))
 	connReader := bufio.NewReader(l.conn)
+	inChan := make(chan string)
+	go func() {
+		for l.isActive {
+			data, err := connReader.ReadString('\n')
+			if err != nil {
+				// the connection is dead. Kill this link
+				debugPrintln(fmt.Sprintf("Lost connection with %v", l.other))
+				l.close()
+				return
+			}
+			inChan <- data
+		}
+	}()
 	for l.isActive {
-		data, err := connReader.ReadString('\n')
-		if err != nil {
-			// the connection is dead. Kill this link
-			debugPrintln(
-				fmt.Sprintf(
-					"Process %v lost connection with %v",
-					myPhysID, l.other))
+		select {
+		case data := <-inChan:
+			dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+			header := dataSlice[0]
+			payload := dataSlice[1]
+			switch header {
+			case "ping":
+				l.doRcvPing(payload)
+			case "msg":
+				sSlice := strings.SplitN(strings.TrimSpace(payload), " ", 2)
+				// sender := sSlice[0]
+				msg := sSlice[1]
+				l.serverOutChan <- msg
+			default:
+				debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
+			}
+		case <-time.After(pingInterval * 2):
 			l.close()
 			return
-		}
-		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
-		header := dataSlice[0]
-		payload := dataSlice[1]
-		switch header {
-		case "ping":
-			l.doRcvPing(payload)
-		case "msg":
-			l.doRcvMsg(payload)
-		default:
-			debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
 		}
 	}
 }

@@ -1,14 +1,15 @@
 package server
 
+// This file contains the definition and main logic of an Ovid server.
+// In particular, this is the central location where actions are
+// triggered by incoming messages.
+
 import (
-	"bufio"
 	"fmt"
-	"net"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -18,33 +19,30 @@ var (
 	masterIP   string
 	masterPort uint16
 	gridIP     string
-	shouldRun  bool
-	masterConn net.Conn
-	// a set of all known servers and their perceived status
-	linkMgr *linkManager
-	msgLog  *messageLog
+	shouldRun  bool // loop condition for the server's routines
+	linkMgr    *linkManager
+	msgLog     *messageLog
 )
 
-// newServer is the constructor for server.
-// It returns a server struct with default values for some fields.
-func initServer(pid processID, gridSz uint16, mstrPort uint16) {
+// Populates the global variables and starts the linkManager
+func initAndRunServer(pid processID, gridSz uint16,
+	mstrPort uint16, serverInChan chan string, masterInChan chan string) {
 	myPhysID = pid
 	gridSize = gridSz
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
 	gridIP = "127.0.0.1"
 	shouldRun = true
-	masterConn = nil
 	knownProcesses := make([]processID, gridSz)
 	for i := 0; i < int(gridSz); i++ {
 		knownProcesses[i] = processID(i)
 	}
-	linkMgr = newLinkManager(knownProcesses)
+	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
 	msgLog = newMessageLog()
+	linkMgr.run()
 }
 
-// String is the "toString" method for this server
-// It returns a string describing this server
+// Returns a string describing this server
 func serverInfo() string {
 	return fmt.Sprintf("* GoOvid server *\n"+
 		"physID: %d\n"+
@@ -53,19 +51,9 @@ func serverInfo() string {
 		myPhysID, gridSize, masterPort)
 }
 
-// sendToMaster sends msg string to the master
-func sendToMaster(msg string) {
-	_, err := masterConn.Write([]byte(msg + "\n"))
-	if err != nil {
-		errMsg := fmt.Sprintf("Can't send msg '%v' to master: %v",
-			msg, err)
-		fatalError(errMsg)
-	}
-}
-
 // Responds to an "alive" command from the master
 func doAlive() {
-	aliveSet := linkMgr.getAlive()
+	aliveSet := linkMgr.getAllUp()
 	sort.Slice(aliveSet,
 		func(i, j int) bool { return aliveSet[i] < aliveSet[j] })
 	rep := make([]string, len(aliveSet))
@@ -74,13 +62,13 @@ func doAlive() {
 	}
 	// compose and send response to master
 	reply := "alive " + strings.Join(rep, ",")
-	sendToMaster(reply)
+	linkMgr.sendToMaster(reply)
 }
 
 // Responds to "get" command from the master
 func doGet() {
 	response := "messages " + strings.Join(msgLog.getMessages(), ",")
-	sendToMaster(response)
+	linkMgr.sendToMaster(response)
 }
 
 // Responds to "broadcast" command from the master
@@ -88,43 +76,30 @@ func doBroadcast(msg string) {
 	linkMgr.broadcast(msg)
 }
 
-// Dials for new connections to all pid <= my pid
-func dialForConnections() {
-	for shouldRun {
-		down := linkMgr.getDead()
-		for _, pid := range down {
-			if pid <= myPhysID && !linkMgr.isUp(pid) {
-				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
-				c, err := net.DialTimeout("tcp", dialingAddr,
-					20*time.Millisecond)
-				if err == nil {
-					l := newLinkKnownOther(c, pid)
-					go l.handleConnection()
-				}
-			}
-		}
-		time.Sleep(1 * time.Second)
+// Handles messages from the master
+func handleMasterMsg(data string) {
+	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+	command := dataSlice[0]
+	switch command {
+	case "get":
+		doGet()
+	case "alive":
+		doAlive()
+	case "broadcast":
+		payload := dataSlice[1]
+		doBroadcast(payload)
+	case "crash":
+		// self-destruct
+		os.Exit(0)
+	default:
+		msg := fmt.Sprintf("Invalid command %v from master", command)
+		debugPrintln(msg)
 	}
 }
 
-// Listens and establishes new connections
-func listenForConnections() {
-	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+myPhysID)
-	l, err := net.Listen("tcp", listenerAddr)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer l.Close()
-	for shouldRun {
-		c, err := l.Accept()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		l := newLink(c)
-		go l.handleConnection()
-	}
+// Handles messages from a server
+func handleServerMsg(data string) {
+	msgLog.appendMsg(data)
 }
 
 func main() {
@@ -154,50 +129,29 @@ func main() {
 
 	// initialize server
 	debugPrintln("Launching server...")
-	initServer(processID(pid), uint16(gridSize), uint16(masterPort))
+	serverInChan := make(chan string) // used to receive inter-server messages
+	masterInChan := make(chan string) // used to receive messages from the master
+	initAndRunServer(processID(pid), uint16(gridSize), uint16(masterPort),
+		serverInChan, masterInChan)
 	debugPrintln(serverInfo())
 
-	// initialize and maintain connections with peers
-	debugPrintln("Listening for peer connections")
-	go listenForConnections()
-	debugPrintln("Dialing for peer connections")
-	go dialForConnections()
-
-	// listen for master on the master address
-	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
-	debugPrintln("Listening for master connecting on " + masterAddr)
-	mstrListener, _ := net.Listen("tcp", masterAddr)
-	mstrConn, _ := mstrListener.Accept()
-	defer mstrConn.Close()
-	masterConn = mstrConn
-	debugPrintln("Accepted master connection")
-
-	// main loop: process commands from master
-	connReader := bufio.NewReader(masterConn)
+	// main loop
+	go func() {
+		// There is an important reason why this is a separate goroutine,
+		// rather than within a select block together with serverInChan.
+		// Because a broadcast includes pushing into serverInChan,
+		// handleMasterMessage may block, resulting in a deadlock. In fact,
+		// while a buffered channel can defer such a deadlock, the deadlock
+		// will inevitably remain a reachable execution. The solution is
+		// what I have here -- decouple the synchrony between the two channels.
+		// Naively, one could do `go handleMasterMsg(<-masterInChan)`,
+		// but that breaks FIFO ordering
+		for shouldRun {
+			handleMasterMsg(<-masterInChan)
+		}
+	}()
 	for shouldRun {
-		data, err := connReader.ReadString('\n')
-		if err != nil {
-			fatalError("Broken connection from master")
-			break
-		}
-		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
-		command := dataSlice[0]
-		switch command {
-		case "get":
-			doGet()
-		case "alive":
-			doAlive()
-		case "broadcast":
-			payload := dataSlice[1]
-			doBroadcast(payload)
-		case "crash":
-			// self-destruct
-			masterConn.Close()
-			os.Exit(0)
-		default:
-			msg := fmt.Sprintf("invalid command %v from master", command)
-			debugPrintln(msg)
-		}
+		handleServerMsg(<-serverInChan)
 	}
 	debugPrintln("Terminating")
 }

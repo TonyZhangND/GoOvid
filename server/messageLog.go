@@ -1,5 +1,9 @@
 package server
 
+// This file contains the definition and methods of the messageLog object.
+// A messageLog is an in-memory, thread-safe slice that stores all
+// inter-server messages the Ovid server receives, as per the chatroom spec.
+
 import "sync"
 
 type messageLog struct {
@@ -7,6 +11,7 @@ type messageLog struct {
 	sync.RWMutex
 }
 
+// Contructor for messageLog
 func newMessageLog() *messageLog {
 	return &messageLog{log: make([]string, 0)}
 }
