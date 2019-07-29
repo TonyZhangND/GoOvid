@@ -76,9 +76,7 @@ func (l *link) runPinger() {
 func (l *link) doRcvPing(s string) {
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
-		if err != nil {
-			fatalServerError(fmt.Sprintf("Invalid ping %v", s))
-		}
+		checkFatalServerError(err, fmt.Sprintf("Invalid ping %v", s))
 		l.other = sender
 		linkMgr.markAsUp(processID(sender), l)
 	}

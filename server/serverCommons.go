@@ -29,3 +29,11 @@ func fatalServerError(errMsg string) {
 	debug.PrintStack()
 	os.Exit(1)
 }
+
+// checkFatalServerError prints the error messange and kills the program
+// if an error is detected
+func checkFatalServerError(e error, errMsg string) {
+	if e != nil {
+		fatalServerError(errMsg)
+	}
+}

@@ -28,7 +28,7 @@ func debugPrintln(agent *Agent, s string) {
 	}
 }
 
-// fatalServerError prints the error messange and halts the agent
+// fatalError prints the error messange and halts the agent
 func fatalError(agent Agent, errMsg string) {
 	agent.halt()
 	fmt.Printf("Error : Agent %v : %v\n", agent.name(), errMsg)

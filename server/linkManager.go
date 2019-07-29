@@ -139,11 +139,8 @@ func (lm *linkManager) broadcast(msg string) {
 // Sends msg string to the master
 func (lm *linkManager) sendToMaster(msg string) {
 	_, err := lm.masterConn.Write([]byte(msg + "\n"))
-	if err != nil {
-		errMsg := fmt.Sprintf("Can't send msg '%v' to master: %v",
-			msg, err)
-		fatalServerError(errMsg)
-	}
+	checkFatalServerError(err, fmt.Sprintf("Can't send msg '%v' to master: %v",
+		msg, err))
 }
 
 // Dials for new connections to all pid < my pid
@@ -193,13 +190,9 @@ func (lm *linkManager) connectAndHandleMaster() {
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
 	debugPrintln("Listening for master connecting on " + masterAddr)
 	mstrListener, err := net.Listen("tcp", masterAddr)
-	if err != nil {
-		fatalServerError("Error connecting to master")
-	}
+	checkFatalServerError(err, "Error connecting to master")
 	mstrConn, err := mstrListener.Accept()
-	if err != nil {
-		fatalServerError("Error connecting to master")
-	}
+	checkFatalServerError(err, "Error connecting to master")
 	lm.masterConn = mstrConn
 	debugPrintln("Accepted master connection")
 	// main loop: process commands from master as async goroutine
@@ -208,10 +201,7 @@ func (lm *linkManager) connectAndHandleMaster() {
 		connReader := bufio.NewReader(lm.masterConn)
 		for shouldRun {
 			data, err := connReader.ReadString('\n')
-			if err != nil {
-				fatalServerError("Broken connection from master")
-				break
-			}
+			checkFatalServerError(err, "Broken connection from master")
 			lm.masterOutChan <- data
 		}
 	}()

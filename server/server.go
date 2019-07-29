@@ -106,15 +106,15 @@ func main() {
 	pid, err1 := strconv.ParseUint(os.Args[1], 10, 16)
 	gridSize, err2 := strconv.ParseUint(os.Args[2], 10, 16)
 	masterPort, err3 := strconv.ParseUint(os.Args[3], 10, 16)
-	if err1 != nil || err2 != nil || err3 != nil {
-		errMsg := fmt.Sprintf("Errors occured while processing arguments.\n"+
-			"PhysID: %v\n"+
-			"gridSize: %v\n"+
-			"masterPort: %v\n"+
-			"Program exiting...\n",
-			err1, err2, err3)
-		fatalServerError(errMsg)
-	}
+	errMsg := fmt.Sprintf("Errors occured while processing arguments.\n"+
+		"PhysID: %v\n"+
+		"gridSize: %v\n"+
+		"masterPort: %v\n"+
+		"Program exiting...\n",
+		err1, err2, err3)
+	checkFatalServerError(err1, errMsg)
+	checkFatalServerError(err2, errMsg)
+	checkFatalServerError(err3, errMsg)
 	if masterPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
 			"as masterPort\n", masterPort)
