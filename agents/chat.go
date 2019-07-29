@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-
-	"github.com/TonyZhangND/GoOvid/server"
 )
 
 type chatAgent struct {
@@ -13,10 +11,11 @@ type chatAgent struct {
 	userName  string
 }
 
-func newChatAgent(name string, broadcastFunc func(msg string)) *chatAgent {
-	return &chatAgent{broadcast: broadcastFunc, userName: name}
+func (ca *chatAgent) agentInit(attrs map[string]interface{}, broadcast func(msg string),
+	send func(msg string, dest AgentType)) {
 }
-
+func (ca *chatAgent) halt()              {}
+func (ca *chatAgent) name() string       { return "" }
 func (ca *chatAgent) deliver(msg string) {}
 
 func (ca *chatAgent) run() {
@@ -26,7 +25,7 @@ func (ca *chatAgent) run() {
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			server.FatalError(fmt.Sprintf("Invalid input %v in chatAgent", input))
+			fatalError(ca, fmt.Sprintf("Invalid input %v in chatAgent", input))
 		}
 	}
 }

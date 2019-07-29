@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	debugMode  = true
 	myPhysID   processID
 	gridSize   uint16
 	masterIP   string
@@ -93,7 +92,7 @@ func handleMasterMsg(data string) {
 		os.Exit(0)
 	default:
 		msg := fmt.Sprintf("Invalid command %v from master", command)
-		DebugPrintln(msg)
+		debugPrintln(msg)
 	}
 }
 
@@ -114,7 +113,7 @@ func main() {
 			"masterPort: %v\n"+
 			"Program exiting...\n",
 			err1, err2, err3)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 	if masterPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
@@ -128,12 +127,12 @@ func main() {
 	}
 
 	// initialize server
-	DebugPrintln("Launching server...")
+	debugPrintln("Launching server...")
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
 	initAndRunServer(processID(pid), uint16(gridSize), uint16(masterPort),
 		serverInChan, masterInChan)
-	DebugPrintln(serverInfo())
+	debugPrintln(serverInfo())
 
 	// main loop
 	go func() {
@@ -153,5 +152,5 @@ func main() {
 	for shouldRun {
 		handleServerMsg(<-serverInChan)
 	}
-	DebugPrintln("Terminating")
+	debugPrintln("Terminating")
 }

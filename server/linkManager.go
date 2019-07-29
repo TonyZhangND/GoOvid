@@ -53,7 +53,7 @@ func (lm *linkManager) markAsDown(pid processID) {
 	if !ok {
 		errMsg := fmt.Sprintf(
 			"Process %v does not exist in failure detector", pid)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 	lm.Lock()
 	lm.manager[pid] = nil
@@ -66,13 +66,13 @@ func (lm *linkManager) markAsUp(pid processID, handler *link) {
 	link, ok := lm.manager[pid]
 	if link != nil && pid != myPhysID {
 		errMsg := fmt.Sprintf("Link to %v already established!", pid)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 	lm.RUnlock()
 	if !ok {
 		errMsg := fmt.Sprintf(
 			"Process %v does not exist in failure detector", pid)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 	lm.Lock()
 	lm.manager[pid] = handler
@@ -86,7 +86,7 @@ func (lm *linkManager) isUp(pid processID) bool {
 	if !ok {
 		errMsg := fmt.Sprintf(
 			"Process %v does not exist in failure detector", pid)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 	defer lm.RUnlock()
 	return link != nil
@@ -142,13 +142,13 @@ func (lm *linkManager) sendToMaster(msg string) {
 	if err != nil {
 		errMsg := fmt.Sprintf("Can't send msg '%v' to master: %v",
 			msg, err)
-		FatalError(errMsg)
+		fatalServerError(errMsg)
 	}
 }
 
 // Dials for new connections to all pid < my pid
 func (lm *linkManager) dialForConnections() {
-	DebugPrintln("Dialing for peer connections")
+	debugPrintln("Dialing for peer connections")
 	for shouldRun {
 		down := linkMgr.getAllDown()
 		for _, pid := range down {
@@ -168,7 +168,7 @@ func (lm *linkManager) dialForConnections() {
 
 // Listens and establishes new connections
 func (lm *linkManager) listenForConnections() {
-	DebugPrintln("Listening for peer connections")
+	debugPrintln("Listening for peer connections")
 	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+myPhysID)
 	l, err := net.Listen("tcp", listenerAddr)
 	if err != nil {
@@ -191,17 +191,17 @@ func (lm *linkManager) listenForConnections() {
 func (lm *linkManager) connectAndHandleMaster() {
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
-	DebugPrintln("Listening for master connecting on " + masterAddr)
+	debugPrintln("Listening for master connecting on " + masterAddr)
 	mstrListener, err := net.Listen("tcp", masterAddr)
 	if err != nil {
-		FatalError("Error connecting to master")
+		fatalServerError("Error connecting to master")
 	}
 	mstrConn, err := mstrListener.Accept()
 	if err != nil {
-		FatalError("Error connecting to master")
+		fatalServerError("Error connecting to master")
 	}
 	lm.masterConn = mstrConn
-	DebugPrintln("Accepted master connection")
+	debugPrintln("Accepted master connection")
 	// main loop: process commands from master as async goroutine
 	go func() {
 		defer lm.masterConn.Close()
@@ -209,7 +209,7 @@ func (lm *linkManager) connectAndHandleMaster() {
 		for shouldRun {
 			data, err := connReader.ReadString('\n')
 			if err != nil {
-				FatalError("Broken connection from master")
+				fatalServerError("Broken connection from master")
 				break
 			}
 			lm.masterOutChan <- data
