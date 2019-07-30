@@ -12,6 +12,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 // A linkManager lm implements a thread-safe map from processID
@@ -22,7 +24,7 @@ import (
 // Note: always lm[myPhysId] = nil, since a server does not need a link
 // with itself.
 type linkManager struct {
-	manager       map[processID]*link
+	manager       map[c.ProcessID]*link
 	masterConn    net.Conn    // connection with the master program
 	serverOutChan chan string // used to stream server messages to main server loop
 	masterOutChan chan string // used to stream master messages to main server loop
@@ -32,9 +34,9 @@ type linkManager struct {
 // Constructor for linkManager
 // It takes a slice of all known process IDs, and initializes a
 // connTracker lm with lm[p]=nil for all p in knownProcesses.
-func newLinkManager(knownProcesses []processID, sOutChan chan string,
+func newLinkManager(knownProcesses []c.ProcessID, sOutChan chan string,
 	mOutChan chan string) *linkManager {
-	t := make(map[processID]*link)
+	t := make(map[c.ProcessID]*link)
 	for _, pid := range knownProcesses {
 		t[pid] = nil
 	}
@@ -42,7 +44,7 @@ func newLinkManager(knownProcesses []processID, sOutChan chan string,
 }
 
 // Marks a process as down in lm and de-registers its link object
-func (lm *linkManager) markAsDown(pid processID) {
+func (lm *linkManager) markAsDown(pid c.ProcessID) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if link == nil {
@@ -61,7 +63,7 @@ func (lm *linkManager) markAsDown(pid processID) {
 }
 
 // Marks a process as up in lm and registers its link object
-func (lm *linkManager) markAsUp(pid processID, handler *link) {
+func (lm *linkManager) markAsUp(pid c.ProcessID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if link != nil && pid != myPhysID {
@@ -80,7 +82,7 @@ func (lm *linkManager) markAsUp(pid processID, handler *link) {
 }
 
 // Returns true iff process pid is up in lm
-func (lm *linkManager) isUp(pid processID) bool {
+func (lm *linkManager) isUp(pid c.ProcessID) bool {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if !ok {
@@ -93,9 +95,9 @@ func (lm *linkManager) isUp(pid processID) bool {
 }
 
 // Returns a slice containing the list of up processes in lm
-func (lm *linkManager) getAllUp() []processID {
+func (lm *linkManager) getAllUp() []c.ProcessID {
 	// The comparator function for sorting a slice of processIDs
-	result := make([]processID, 0)
+	result := make([]c.ProcessID, 0)
 	lm.RLock()
 	for pid, link := range lm.manager {
 		// find the nodes that are up
@@ -109,8 +111,8 @@ func (lm *linkManager) getAllUp() []processID {
 }
 
 // Returns a slice containing the list of down processes in lm
-func (lm *linkManager) getAllDown() []processID {
-	result := make([]processID, 0)
+func (lm *linkManager) getAllDown() []c.ProcessID {
+	result := make([]c.ProcessID, 0)
 	lm.RLock()
 	for pid, link := range lm.manager {
 		if link == nil && pid != myPhysID { // cogito ergo sum
@@ -150,7 +152,7 @@ func (lm *linkManager) dialForConnections() {
 		down := linkMgr.getAllDown()
 		for _, pid := range down {
 			if pid < myPhysID && !linkMgr.isUp(pid) {
-				dialingAddr := fmt.Sprintf("%s:%d", gridIP, basePort+pid)
+				dialingAddr := fmt.Sprintf("%s:%d", gridIP, uint16(basePort)+uint16(pid))
 				c, err := net.DialTimeout("tcp", dialingAddr,
 					20*time.Millisecond)
 				if err == nil {
@@ -166,7 +168,7 @@ func (lm *linkManager) dialForConnections() {
 // Listens and establishes new connections
 func (lm *linkManager) listenForConnections() {
 	debugPrintln("Listening for peer connections")
-	listenerAddr := fmt.Sprintf("%s:%d", gridIP, basePort+myPhysID)
+	listenerAddr := fmt.Sprintf("%s:%d", gridIP, uint16(basePort)+uint16(myPhysID))
 	l, err := net.Listen("tcp", listenerAddr)
 	if err != nil {
 		fmt.Println(err)

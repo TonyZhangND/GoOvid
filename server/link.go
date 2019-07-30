@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 // A link l is an object that manages a connection between this process
@@ -31,7 +33,7 @@ func newLink(c net.Conn, sOutChan chan string) *link {
 }
 
 // Constructor for link where other party is known
-func newLinkKnownOther(c net.Conn, pid processID, sOutChan chan string) *link {
+func newLinkKnownOther(c net.Conn, pid c.ProcessID, sOutChan chan string) *link {
 	l := &link{conn: c, other: int(pid), isActive: true, serverOutChan: sOutChan}
 	linkMgr.markAsUp(pid, l)
 	return l
@@ -46,7 +48,7 @@ func (l *link) close() {
 	if l.other < 0 {
 		return
 	}
-	linkMgr.markAsDown(processID(l.other))
+	linkMgr.markAsDown(c.ProcessID(l.other))
 	l.conn.Close()
 }
 
@@ -78,7 +80,7 @@ func (l *link) doRcvPing(s string) {
 		sender, err := strconv.Atoi(s)
 		checkFatalServerError(err, fmt.Sprintf("Invalid ping %v", s))
 		l.other = sender
-		linkMgr.markAsUp(processID(sender), l)
+		linkMgr.markAsUp(c.ProcessID(sender), l)
 	}
 }
 

@@ -2,8 +2,11 @@ package agents
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"runtime/debug"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 const debugMode = true
@@ -19,6 +22,12 @@ type Agent interface {
 	run()
 	halt()
 	name() string
+}
+
+type AgentInfo struct {
+	agentType AgentType
+	hostIP    net.IP
+	hostPort  c.PortNum
 }
 
 // DebugPrintln prints the string s if debug mode is on

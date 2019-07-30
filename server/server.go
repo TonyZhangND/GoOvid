@@ -10,13 +10,15 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 var (
-	myPhysID   processID
+	myPhysID   c.ProcessID
 	gridSize   uint16
 	masterIP   string
-	masterPort uint16
+	masterPort c.PortNum
 	gridIP     string
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
@@ -24,17 +26,17 @@ var (
 )
 
 // Populates the global variables and starts the linkManager
-func initAndRunServer(pid processID, gridSz uint16,
-	mstrPort uint16, serverInChan chan string, masterInChan chan string) {
+func initAndRunServer(pid c.ProcessID, gridSz uint16,
+	mstrPort c.PortNum, serverInChan chan string, masterInChan chan string) {
 	myPhysID = pid
 	gridSize = gridSz
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
 	gridIP = "127.0.0.1"
 	shouldRun = true
-	knownProcesses := make([]processID, gridSz)
+	knownProcesses := make([]c.ProcessID, gridSz)
 	for i := 0; i < int(gridSz); i++ {
-		knownProcesses[i] = processID(i)
+		knownProcesses[i] = c.ProcessID(i)
 	}
 	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
 	msgLog = newMessageLog()
@@ -130,7 +132,7 @@ func main() {
 	debugPrintln("Launching server...")
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
-	initAndRunServer(processID(pid), uint16(gridSize), uint16(masterPort),
+	initAndRunServer(c.ProcessID(pid), uint16(gridSize), c.PortNum(masterPort),
 		serverInChan, masterInChan)
 	debugPrintln(serverInfo())
 

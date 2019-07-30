@@ -7,13 +7,13 @@ import (
 	"os"
 	"runtime/debug"
 	"time"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 const debugMode = true
 const pingInterval = 500 * time.Millisecond
-const basePort = 3000
-
-type processID uint16
+const basePort c.PortNum = 3000
 
 // DebugPrintln prints the string s if debug mode is on
 func debugPrintln(s string) {
