@@ -9,6 +9,7 @@ import (
 type chatAgent struct {
 	broadcast func(msg string)
 	userName  string
+	isActive  bool
 }
 
 func (ca *chatAgent) agentInit(attrs map[string]interface{}, broadcast func(msg string),
@@ -20,7 +21,8 @@ func (ca *chatAgent) deliver(msg string) {}
 
 func (ca *chatAgent) run() {
 	reader := bufio.NewReader(os.Stdin)
-	for {
+	ca.isActive = true
+	for ca.isActive {
 		fmt.Printf("%v > ", ca.userName)
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')

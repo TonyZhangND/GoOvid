@@ -26,7 +26,7 @@ type link struct {
 
 // Constructor for link where other party is unknown
 func newLink(c net.Conn, sOutChan chan string) *link {
-	l := &link{conn: c, other: -1, isActive: true, serverOutChan: sOutChan}
+	l := &link{conn: c, other: -1, isActive: false, serverOutChan: sOutChan}
 	return l
 }
 
@@ -85,6 +85,7 @@ func (l *link) doRcvPing(s string) {
 // Main thread for server-server connection
 func (l *link) handleConnection() {
 	defer l.close()
+	l.isActive = true
 	go l.runPinger()
 	debugPrintln(fmt.Sprintf("Serving %s", l.conn.RemoteAddr().String()))
 	connReader := bufio.NewReader(l.conn)
