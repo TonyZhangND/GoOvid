@@ -14,6 +14,55 @@ func checkDecodeError(err error, dat string) {
 	c.CheckFatalOvidError(err, fmt.Sprintf("%v encountered decoding %v", err, dat))
 }
 
+// Helper: Parses the json object of an agent, returning a pointer to the
+// resulting AgentInfo struct
+func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
+	agent := a.AgentInfo{} // alloc empty struct for the agent
+	for k, v := range agentObj {
+		switch k {
+		case "type":
+			switch v.(string) {
+			case "chat":
+				agent.AgentType = a.Chat
+			default:
+				c.FatalOvidError(fmt.Sprintf("Unknown agent type %v", v))
+			}
+		case "box":
+			agent.Box = v.(string)
+		case "attrs":
+			agent.RawAttrs = v.(map[string]interface{})
+		case "routes":
+			// initialize the routing table
+			routingTable := make(map[c.ProcessID]a.Route)
+
+			// iterate over each link
+			rts := v.(map[string]interface{})
+			for vidRaw, rtRaw := range rts {
+				vid, err := strconv.ParseUint(vidRaw, 10, 16)
+				checkDecodeError(err, vidRaw)
+				rt := rtRaw.(map[string]interface{})
+				if len(rt) != 1 {
+					c.FatalOvidError(fmt.Sprintf("Invalid route %v", rtRaw))
+				}
+				// parse the json object for the link
+				route := a.Route{} // alloc a Route struct to be filled
+				for pidRaw, portRaw := range rt {
+					pid, err := strconv.ParseUint(pidRaw, 10, 16)
+					checkDecodeError(err, pidRaw)
+					port := c.PortNum(portRaw.(float64))
+					route.DestID = c.ProcessID(pid)
+					route.DestPort = c.PortNum(port)
+				}
+				routingTable[c.ProcessID(vid)] = route
+			}
+			agent.Routes = routingTable
+		default:
+			c.FatalOvidError(fmt.Sprintf("Unknown agent field %v", k))
+		}
+	}
+	return &agent
+}
+
 func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)
@@ -33,38 +82,19 @@ func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 	for id, obj := range m {
 		pid, err := strconv.ParseUint(id, 10, 16)
 		checkDecodeError(err, configFile)
-		agent := a.AgentInfo{} // alloc empty struct for pid
-
-		// loop over the json object for pid
-		objM := obj.(map[string]interface{})
-		for k, v := range objM {
-			switch k {
-			case "type":
-				switch v.(string) {
-				case "chat":
-					agent.AgentType = a.Chat
-				default:
-					c.FatalOvidError(fmt.Sprintf("Unknown agent type %v", v))
-				}
-			case "box":
-				agent.Box = v.(string)
-			case "attrs":
-				agent.RawAttrs = v.(map[string]interface{})
-			case "routes":
-				agent.Routes = v.(map[string]interface{})
-			default:
-				c.FatalOvidError(fmt.Sprintf("Unknown agent field %v", k))
-			}
-		}
-		res[c.ProcessID(pid)] = &agent
-	}
-	fmt.Println(res)
-	for k, v := range res {
-		fmt.Printf("%v : %v\n", k, v)
+		res[c.ProcessID(pid)] = parseAgentObject(obj.(map[string]interface{}))
 	}
 	return &res
 }
 
+// Prints the resulting map from running Parse()
+func printResult(res *map[c.ProcessID]*a.AgentInfo) {
+	fmt.Println(*res)
+	for k, v := range *res {
+		fmt.Printf("%v : %v\n", k, v)
+	}
+}
+
 func main() {
-	Parse("chat.json")
+	printResult(Parse("chat.json"))
 }

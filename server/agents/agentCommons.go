@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+
+	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 const debugMode = true
@@ -25,7 +27,12 @@ type AgentInfo struct {
 	AgentType AgentType
 	Box       string
 	RawAttrs  map[string]interface{}
-	Routes    map[string]interface{}
+	Routes    map[c.ProcessID]Route
+}
+
+type Route struct {
+	DestID   c.ProcessID
+	DestPort c.PortNum
 }
 
 // DebugPrintln prints the string s if debug mode is on
