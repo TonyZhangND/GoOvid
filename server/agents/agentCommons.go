@@ -10,12 +10,16 @@ import (
 
 const debugMode = true
 
+// AgentType is an integer denoting the type of an agent
+// It acts like an enum
 type AgentType int
 
 const (
-	Chat AgentType = 1
+	// Chat agent enum
+	Chat AgentType = iota
 )
 
+// Agent is an interface that all agents must implement
 type Agent interface {
 	deliver(msg string)
 	run()
@@ -23,6 +27,7 @@ type Agent interface {
 	name() string
 }
 
+// AgentInfo is a struct containing data common to all agents
 type AgentInfo struct {
 	Type     AgentType
 	Box      string
@@ -30,19 +35,20 @@ type AgentInfo struct {
 	Routes   map[c.ProcessID]Route
 }
 
+// Route is a tuple struct representing a route
 type Route struct {
 	DestID   c.ProcessID
 	DestPort c.PortNum
 }
 
-// DebugPrintln prints the string s if debug mode is on
+// Prints the string s if debug mode is on
 func debugPrintln(agent *Agent, s string) {
 	if debugMode {
-		fmt.Printf("Agent %v : %v\n", (*agent).name())
+		fmt.Printf("Agent %v : %v\n", (*agent).name(), s)
 	}
 }
 
-// fatalError prints the error messange and halts the agent
+// Prints the error messange and halts the agent
 func fatalError(agent Agent, errMsg string) {
 	agent.halt()
 	fmt.Printf("Error : Agent %v : %v\n", agent.name(), errMsg)

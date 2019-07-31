@@ -10,6 +10,8 @@ import (
 	a "github.com/TonyZhangND/GoOvid/server/agents"
 )
 
+// Prints the error messange and kills the program
+// if an error is detected
 func checkDecodeError(err error, dat string) {
 	c.CheckFatalOvidError(err, fmt.Sprintf("%v encountered decoding %v", err, dat))
 }
@@ -63,6 +65,8 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 	return &agent
 }
 
+// Parse reads the ovid configuration in configFile, and returns a pointer
+// to a map containing the AgentInfo objects in the configuration
 func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)

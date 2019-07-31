@@ -30,7 +30,7 @@ func fatalServerError(errMsg string) {
 	os.Exit(1)
 }
 
-// checkFatalServerError prints the error messange and kills the program
+// Prints the error messange and kills the program
 // if an error is detected
 func checkFatalServerError(e error, errMsg string) {
 	if e != nil {
