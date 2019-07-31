@@ -24,10 +24,10 @@ type Agent interface {
 }
 
 type AgentInfo struct {
-	AgentType AgentType
-	Box       string
-	RawAttrs  map[string]interface{}
-	Routes    map[c.ProcessID]Route
+	Type     AgentType
+	Box      string
+	RawAttrs map[string]interface{}
+	Routes   map[c.ProcessID]Route
 }
 
 type Route struct {

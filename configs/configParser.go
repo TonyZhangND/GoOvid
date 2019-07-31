@@ -1,4 +1,4 @@
-package main
+package configs
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 		case "type":
 			switch v.(string) {
 			case "chat":
-				agent.AgentType = a.Chat
+				agent.Type = a.Chat
 			default:
 				c.FatalOvidError(fmt.Sprintf("Unknown agent type %v", v))
 			}
