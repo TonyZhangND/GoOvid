@@ -49,9 +49,10 @@ func debugPrintln(agent *Agent, s string) {
 }
 
 // Prints the error messange and halts the agent
-func fatalError(agent Agent, errMsg string) {
+func fatalAgentErrorf(agent Agent, errMsg string, a ...interface{}) {
 	agent.halt()
-	fmt.Printf("Error : Agent %v : %v\n", agent.name(), errMsg)
+	msg := fmt.Sprintf(errMsg, a...)
+	fmt.Printf("Error : Agent %v : %v", agent.name(), msg)
 	debug.PrintStack()
 	os.Exit(1)
 }

@@ -16,24 +16,26 @@ const pingInterval = 500 * time.Millisecond
 const basePort c.PortNum = 3000
 
 // DebugPrintln prints the string s if debug mode is on
-func debugPrintln(s string) {
+func debugPrintf(s string, a ...interface{}) {
 	if debugMode {
-		fmt.Printf("Process %v : %v\n", myPhysID, s)
+		errMsg := fmt.Sprintf(s, a...)
+		fmt.Printf("Process %v : %s", myPhysID, errMsg)
 	}
 }
 
-// fatalServerError prints the error messange and kills the program
-func fatalServerError(errMsg string) {
+// fatalServerErrorf prints the error messange and kills the program
+func fatalServerErrorf(s string, a ...interface{}) {
 	shouldRun = false
-	fmt.Printf("Error : process %v : %v\n", myPhysID, errMsg)
+	msg := fmt.Sprintf(s, a...)
+	fmt.Printf("Error : process %v : %v", myPhysID, msg)
 	debug.PrintStack()
 	os.Exit(1)
 }
 
 // Prints the error messange and kills the program
 // if an error is detected
-func checkFatalServerError(e error, errMsg string) {
+func checkFatalServerErrorf(e error, s string, a ...interface{}) {
 	if e != nil {
-		fatalServerError(errMsg)
+		fatalServerErrorf(s, a...)
 	}
 }

@@ -27,7 +27,7 @@ func (ca *chatAgent) run() {
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fatalError(ca, fmt.Sprintf("Invalid input %v in chatAgent", input))
+			fatalAgentErrorf(ca, "Invalid input %v in chatAgent\n", input)
 		}
 	}
 }

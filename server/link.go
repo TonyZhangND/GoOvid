@@ -57,10 +57,7 @@ func (l *link) close() {
 func (l *link) send(s string) {
 	_, err := l.conn.Write([]byte(string(s)))
 	if err != nil {
-		debugPrintln(
-			fmt.Sprintf(
-				"Send %v to %v failed. Closing connection\n",
-				s, l.other))
+		debugPrintf("Send %v to %v failed. Closing connection\n", s, l.other)
 		l.close()
 	}
 }
@@ -78,7 +75,7 @@ func (l *link) runPinger() {
 func (l *link) doRcvPing(s string) {
 	if l.other < 0 {
 		sender, err := strconv.Atoi(s)
-		checkFatalServerError(err, fmt.Sprintf("Invalid ping %v", s))
+		checkFatalServerErrorf(err, "Invalid ping %v\n", s)
 		l.other = sender
 		linkMgr.markAsUp(c.ProcessID(sender), l)
 	}
@@ -89,7 +86,7 @@ func (l *link) handleConnection() {
 	defer l.close()
 	l.isActive = true
 	go l.runPinger()
-	debugPrintln(fmt.Sprintf("Serving %s", l.conn.RemoteAddr().String()))
+	debugPrintf("Serving %s\n", l.conn.RemoteAddr().String())
 	connReader := bufio.NewReader(l.conn)
 	inChan := make(chan string)
 	go func() {
@@ -97,7 +94,7 @@ func (l *link) handleConnection() {
 			data, err := connReader.ReadString('\n')
 			if err != nil {
 				// the connection is dead. Kill this link
-				debugPrintln(fmt.Sprintf("Lost connection with %v", l.other))
+				debugPrintf("Lost connection with %v\n", l.other)
 				l.close()
 				return
 			}
@@ -119,7 +116,7 @@ func (l *link) handleConnection() {
 				msg := sSlice[1]
 				l.serverOutChan <- msg
 			default:
-				debugPrintln(fmt.Sprintf("Invalid msg %v from master\n", header))
+				debugPrintf("Invalid msg %v from master\n", header)
 			}
 		case <-time.After(pingInterval * 2):
 			l.close()

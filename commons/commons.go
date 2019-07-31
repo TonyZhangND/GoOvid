@@ -13,19 +13,19 @@ type (
 	PortNum uint16
 )
 
-// FatalOvidError prints the error messange and kills the entire program
-func FatalOvidError(errMsg string) {
-	fmt.Printf("Error : Ovid : %v\n", errMsg)
+// FatalOvidErrorf prints the error messange and kills the entire program
+func FatalOvidErrorf(s string, a ...interface{}) {
+	errMsg := fmt.Sprintf(s, a...)
+	fmt.Printf("Error : Ovid : %v", errMsg)
 	debug.PrintStack()
 	os.Exit(1)
 }
 
-// CheckFatalOvidError prints the error messange and kills the entire program
+// CheckFatalOvidErrorf prints the error messange and kills the entire program
 // if an error is detected
-func CheckFatalOvidError(err error, errMsg string) {
+func CheckFatalOvidErrorf(err error, s string, a ...interface{}) {
 	if err != nil {
-		fmt.Printf("Error : Ovid : %v\n", errMsg)
-		debug.PrintStack()
+		FatalOvidErrorf(s, a...)
 		os.Exit(1)
 	}
 }

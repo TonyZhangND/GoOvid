@@ -53,9 +53,7 @@ func (lm *linkManager) markAsDown(pid c.ProcessID) {
 	}
 	lm.RUnlock()
 	if !ok {
-		errMsg := fmt.Sprintf(
-			"Process %v does not exist in failure detector", pid)
-		fatalServerError(errMsg)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
 	}
 	lm.Lock()
 	lm.manager[pid] = nil
@@ -67,14 +65,11 @@ func (lm *linkManager) markAsUp(pid c.ProcessID, handler *link) {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if link != nil && pid != myPhysID {
-		errMsg := fmt.Sprintf("Link to %v already established!", pid)
-		fatalServerError(errMsg)
+		fatalServerErrorf("Link to %v already established!\n", pid)
 	}
 	lm.RUnlock()
 	if !ok {
-		errMsg := fmt.Sprintf(
-			"Process %v does not exist in failure detector", pid)
-		fatalServerError(errMsg)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
 	}
 	lm.Lock()
 	lm.manager[pid] = handler
@@ -86,9 +81,7 @@ func (lm *linkManager) isUp(pid c.ProcessID) bool {
 	lm.RLock()
 	link, ok := lm.manager[pid]
 	if !ok {
-		errMsg := fmt.Sprintf(
-			"Process %v does not exist in failure detector", pid)
-		fatalServerError(errMsg)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
 	}
 	defer lm.RUnlock()
 	return link != nil
@@ -141,13 +134,12 @@ func (lm *linkManager) broadcast(msg string) {
 // Sends msg string to the master
 func (lm *linkManager) sendToMaster(msg string) {
 	_, err := lm.masterConn.Write([]byte(msg + "\n"))
-	checkFatalServerError(err, fmt.Sprintf("Can't send msg '%v' to master: %v",
-		msg, err))
+	checkFatalServerErrorf(err, "Can't send msg '%v' to master: %v\n", msg, err)
 }
 
 // Dials for new connections to all pid < my pid
 func (lm *linkManager) dialForConnections() {
-	debugPrintln("Dialing for peer connections")
+	debugPrintf("Dialing for peer connections\n")
 	for shouldRun {
 		down := linkMgr.getAllDown()
 		for _, pid := range down {
@@ -167,7 +159,7 @@ func (lm *linkManager) dialForConnections() {
 
 // Listens and establishes new connections
 func (lm *linkManager) listenForConnections() {
-	debugPrintln("Listening for peer connections")
+	debugPrintf("Listening for peer connections\n")
 	listenerAddr := fmt.Sprintf("%s:%d", gridIP, uint16(basePort)+uint16(myPhysID))
 	l, err := net.Listen("tcp", listenerAddr)
 	if err != nil {
@@ -190,20 +182,20 @@ func (lm *linkManager) listenForConnections() {
 func (lm *linkManager) connectAndHandleMaster() {
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
-	debugPrintln("Listening for master connecting on " + masterAddr)
+	debugPrintf("Listening for master connecting on %v\n", masterAddr)
 	mstrListener, err := net.Listen("tcp", masterAddr)
-	checkFatalServerError(err, "Error connecting to master")
+	checkFatalServerErrorf(err, "Error connecting to master\n")
 	mstrConn, err := mstrListener.Accept()
-	checkFatalServerError(err, "Error connecting to master")
+	checkFatalServerErrorf(err, "Error connecting to master\n")
 	lm.masterConn = mstrConn
-	debugPrintln("Accepted master connection")
+	debugPrintf("Accepted master connection\n")
 	// main loop: process commands from master as async goroutine
 	go func() {
 		defer lm.masterConn.Close()
 		connReader := bufio.NewReader(lm.masterConn)
 		for shouldRun {
 			data, err := connReader.ReadString('\n')
-			checkFatalServerError(err, "Broken connection from master")
+			checkFatalServerErrorf(err, "Broken connection from master\n")
 			lm.masterOutChan <- data
 		}
 	}()

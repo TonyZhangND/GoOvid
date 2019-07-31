@@ -13,7 +13,7 @@ import (
 // Prints the error messange and kills the program
 // if an error is detected
 func checkDecodeError(err error, dat string) {
-	c.CheckFatalOvidError(err, fmt.Sprintf("%v encountered decoding %v", err, dat))
+	c.CheckFatalOvidErrorf(err, "%v encountered decoding %v", err, dat)
 }
 
 // Helper: Parses the json object of an agent, returning a pointer to the
@@ -27,7 +27,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 			case "chat":
 				agent.Type = a.Chat
 			default:
-				c.FatalOvidError(fmt.Sprintf("Unknown agent type %v", v))
+				c.FatalOvidErrorf("Unknown agent type %v\n", v)
 			}
 		case "box":
 			agent.Box = v.(string)
@@ -44,7 +44,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 				checkDecodeError(err, vidRaw)
 				rt := rtRaw.(map[string]interface{})
 				if len(rt) != 1 {
-					c.FatalOvidError(fmt.Sprintf("Invalid route %v", rtRaw))
+					c.FatalOvidErrorf("Invalid route %v\n", rtRaw)
 				}
 				// parse the json object for the link
 				route := a.Route{} // alloc a Route struct to be filled
@@ -59,7 +59,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 			}
 			agent.Routes = routingTable
 		default:
-			c.FatalOvidError(fmt.Sprintf("Unknown agent field %v", k))
+			c.FatalOvidErrorf("Unknown agent field %v\n", k)
 		}
 	}
 	return &agent
@@ -71,7 +71,7 @@ func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		c.FatalOvidError(fmt.Sprintf("Error: %v encountered reading %v", err, configFile))
+		c.FatalOvidErrorf("%v encountered reading %v", err, configFile)
 	}
 
 	// Decode the file into a map[string]interface{}
