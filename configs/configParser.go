@@ -30,12 +30,12 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 				c.FatalOvidErrorf("Unknown agent type %v\n", v)
 			}
 		case "box":
-			agent.Box = v.(string)
+			agent.Box = c.ParseBoxAddr(v.(string))
 		case "attrs":
 			agent.RawAttrs = v.(map[string]interface{})
 		case "routes":
 			// initialize the routing table
-			routingTable := make(map[c.ProcessID]a.Route)
+			routingTable := make(map[c.ProcessID]c.Route)
 
 			// iterate over each link
 			rts := v.(map[string]interface{})
@@ -47,7 +47,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 					c.FatalOvidErrorf("Invalid route %v\n", rtRaw)
 				}
 				// parse the json object for the link
-				route := a.Route{} // alloc a Route struct to be filled
+				route := c.Route{} // alloc a Route struct to be filled
 				for pidRaw, portRaw := range rt {
 					pid, err := strconv.ParseUint(pidRaw, 10, 16)
 					checkDecodeError(err, pidRaw)

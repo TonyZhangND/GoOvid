@@ -30,15 +30,9 @@ type Agent interface {
 // AgentInfo is a struct containing data common to all agents
 type AgentInfo struct {
 	Type     AgentType
-	Box      string
+	Box      c.BoxAddr
 	RawAttrs map[string]interface{}
-	Routes   map[c.ProcessID]Route
-}
-
-// Route is a tuple struct representing a route
-type Route struct {
-	DestID   c.ProcessID
-	DestPort c.PortNum
+	Routes   map[c.ProcessID]c.Route
 }
 
 // Prints the string s if debug mode is on

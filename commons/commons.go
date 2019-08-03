@@ -2,8 +2,10 @@ package commons
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"runtime/debug"
+	"strconv"
 )
 
 type (
@@ -12,6 +14,41 @@ type (
 	// PortNum is a type representing an IP port on a host
 	PortNum uint16
 )
+
+// Route is a tuple struct representing a route
+type Route struct {
+	DestID   ProcessID
+	DestPort PortNum
+}
+
+// BoxAddr is a struct defining the box that contains agents
+type BoxAddr struct {
+	Host net.IP
+	Port PortNum
+}
+
+// ParseBoxAddr parses string s into a Box struct and returns it
+func ParseBoxAddr(s string) BoxAddr {
+	ipStr, portStr, err := net.SplitHostPort(s)
+	CheckFatalOvidErrorf(err, "Cannot parse box string %s\n", s)
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		FatalOvidErrorf("Cannot parse IP %s of box %s\n", ipStr, s)
+	}
+	port, err := strconv.ParseUint(portStr, 10, 16)
+	CheckFatalOvidErrorf(err, "Cannot parse port %s of box %s\n", portStr, s)
+	return BoxAddr{Host: ip, Port: PortNum(port)}
+}
+
+// Equal reports whether b and x are the same box
+func (b *BoxAddr) Equal(x *BoxAddr) bool {
+	return b.Host.Equal(x.Host) && b.Port == x.Port
+}
+
+// Returns the canonical string representing the box
+func (b *BoxAddr) String() string {
+	return fmt.Sprintf("%s:%v", b.Host.String(), b.Port)
+}
 
 // FatalOvidErrorf prints the error messange and kills the entire program
 func FatalOvidErrorf(s string, a ...interface{}) {
