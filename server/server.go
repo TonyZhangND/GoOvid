@@ -84,12 +84,12 @@ func handleServerMsg(data string) {
 // InitAndRunServer is the main method of a server
 func InitAndRunServer(boxID c.BoxID, knownProcesses []c.BoxID, mstrPort c.PortNum) {
 
-	if masterPort < 1024 {
+	if mstrPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
 			"as masterPort\n", masterPort)
 		os.Exit(1)
 	}
-	if masterPort < 10000 {
+	if mstrPort < 10000 {
 		fmt.Printf("Port number %d is reserved for inter-server use\n",
 			masterPort)
 		os.Exit(1)

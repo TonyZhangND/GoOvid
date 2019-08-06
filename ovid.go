@@ -1,4 +1,4 @@
-package ovid
+package main
 
 import (
 	"os"
@@ -15,7 +15,7 @@ func main() {
 	config := strings.Trim(os.Args[1], " ")
 	myBox := comm.ParseBoxAddr(strings.Trim(os.Args[2], " "))
 	masterPort, err := strconv.ParseUint(os.Args[3], 10, 16)
-	comm.FatalOvidErrorf("%v encountered parsing masterPort\n", err)
+	comm.CheckFatalOvidErrorf(err, "Cannot parse masterPort %v (%v)\n", os.Args[3], err)
 	agentMap := *conf.Parse(config)
 
 	// get a list of known boxes
