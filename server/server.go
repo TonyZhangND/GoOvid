@@ -8,48 +8,27 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 var (
-	myPhysID   c.ProcessID
-	gridSize   uint16
+	myBoxID    c.BoxID
 	masterIP   string
 	masterPort c.PortNum
-	gridIP     string
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
 	msgLog     *messageLog
 )
 
-// Populates the global variables and starts the linkManager
-func initAndRunServer(pid c.ProcessID, gridSz uint16,
-	mstrPort c.PortNum, serverInChan chan string, masterInChan chan string) {
-	myPhysID = pid
-	gridSize = gridSz
-	masterIP = "127.0.0.1"
-	masterPort = mstrPort
-	gridIP = "127.0.0.1"
-	shouldRun = true
-	knownProcesses := make([]c.ProcessID, gridSz)
-	for i := 0; i < int(gridSz); i++ {
-		knownProcesses[i] = c.ProcessID(i)
-	}
-	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
-	msgLog = newMessageLog()
-	linkMgr.run()
-}
-
 // Returns a string describing this server
 func serverInfo() string {
 	return fmt.Sprintf("* GoOvid server *\n"+
-		"physID: %d\n"+
-		"gridSize: %d\n"+
+		"myBoxID: %s\n"+
+		"Boxes in grid: %v\n"+
 		"masterPort: %d\n",
-		myPhysID, gridSize, masterPort)
+		myBoxID, linkMgr.getAllKnown(), masterPort)
 }
 
 // Responds to an "alive" command from the master
@@ -58,8 +37,8 @@ func doAlive() {
 	sort.Slice(aliveSet,
 		func(i, j int) bool { return aliveSet[i] < aliveSet[j] })
 	rep := make([]string, len(aliveSet))
-	for i, pid := range aliveSet { // find the nodes that are up
-		rep[i] = strconv.Itoa(int(pid))
+	for i, bid := range aliveSet { // find the nodes that are up
+		rep[i] = string(bid)
 	}
 	// compose and send response to master
 	reply := "alive " + strings.Join(rep, ",")
@@ -102,20 +81,10 @@ func handleServerMsg(data string) {
 	msgLog.appendMsg(data)
 }
 
-func main() {
-	// process command line arguments
-	pid, err1 := strconv.ParseUint(os.Args[1], 10, 16)
-	gridSize, err2 := strconv.ParseUint(os.Args[2], 10, 16)
-	masterPort, err3 := strconv.ParseUint(os.Args[3], 10, 16)
-	errMsg := fmt.Sprintf("Errors occured while processing arguments.\n"+
-		"PhysID: %v\n"+
-		"gridSize: %v\n"+
-		"masterPort: %v\n"+
-		"Program exiting...\n",
-		err1, err2, err3)
-	checkFatalServerErrorf(err1, errMsg)
-	checkFatalServerErrorf(err2, errMsg)
-	checkFatalServerErrorf(err3, errMsg)
+// Main method for server
+// Populates the global variables and starts the linkManager
+func initAndRunServer(boxAddr string, knownProcesses []c.BoxID, mstrPort c.PortNum) {
+
 	if masterPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
 			"as masterPort\n", masterPort)
@@ -127,12 +96,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	// initialize server
-	debugPrintf("Launching server...\n")
+	myBoxID = c.ParseBoxAddr(boxAddr)
+	masterIP = "127.0.0.1"
+	masterPort = mstrPort
+	shouldRun = true
+
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
-	initAndRunServer(c.ProcessID(pid), uint16(gridSize), c.PortNum(masterPort),
-		serverInChan, masterInChan)
+
+	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
+	msgLog = newMessageLog()
+	debugPrintf("Launching server...\n")
+	linkMgr.run()
 	debugPrintf(serverInfo())
 
 	// main loop

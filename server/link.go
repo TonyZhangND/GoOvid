@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,23 +18,22 @@ import (
 // A link l is an object that manages a connection between this process
 // and another process p
 type link struct {
-	conn net.Conn
-	// TODO: use an enumerated type for other?
-	other         int         // who's on the other end of the line. -1 if unknown
+	conn          net.Conn
+	other         c.BoxID     // who's on the other end of the line. "" if unknown
 	isActive      bool        // loop condition for the link's routines
 	serverOutChan chan string // used to stream messages to main server loop
 }
 
 // Constructor for link where other party is unknown
 func newLink(c net.Conn, sOutChan chan string) *link {
-	l := &link{conn: c, other: -1, isActive: false, serverOutChan: sOutChan}
+	l := &link{conn: c, other: "", isActive: false, serverOutChan: sOutChan}
 	return l
 }
 
 // Constructor for link where other party is known
-func newLinkKnownOther(c net.Conn, pid c.ProcessID, sOutChan chan string) *link {
-	l := &link{conn: c, other: int(pid), isActive: true, serverOutChan: sOutChan}
-	linkMgr.markAsUp(pid, l)
+func newLinkKnownOther(c net.Conn, bid c.BoxID, sOutChan chan string) *link {
+	l := &link{conn: c, other: bid, isActive: true, serverOutChan: sOutChan}
+	linkMgr.markAsUp(bid, l)
 	return l
 }
 
@@ -45,10 +43,10 @@ func newLinkKnownOther(c net.Conn, pid c.ProcessID, sOutChan chan string) *link 
 // 3. Close my net.Conn channel
 func (l *link) close() {
 	l.isActive = false
-	if l.other < 0 {
+	if string(l.other) == "" {
 		return
 	}
-	linkMgr.markAsDown(c.ProcessID(l.other))
+	linkMgr.markAsDown(c.BoxID(l.other))
 	l.conn.Close()
 }
 
@@ -65,7 +63,7 @@ func (l *link) send(s string) {
 // Begins sending pings into l.conn channel
 func (l *link) runPinger() {
 	for l.isActive {
-		ping := fmt.Sprintf("ping %v\n", myPhysID)
+		ping := fmt.Sprintf("ping %v\n", myBoxID)
 		l.send(ping)
 		time.Sleep(pingInterval)
 	}
@@ -73,11 +71,10 @@ func (l *link) runPinger() {
 
 // Processes a ping received from the net.Conn channel
 func (l *link) doRcvPing(s string) {
-	if l.other < 0 {
-		sender, err := strconv.Atoi(s)
-		checkFatalServerErrorf(err, "Invalid ping %v\n", s)
+	if string(l.other) == "" {
+		sender := c.ParseBoxAddr(s)
 		l.other = sender
-		linkMgr.markAsUp(c.ProcessID(sender), l)
+		linkMgr.markAsUp(sender, l)
 	}
 }
 

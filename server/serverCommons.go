@@ -19,7 +19,7 @@ const basePort c.PortNum = 3000
 func debugPrintf(s string, a ...interface{}) {
 	if debugMode {
 		errMsg := fmt.Sprintf(s, a...)
-		fmt.Printf("Process %v : %s", myPhysID, errMsg)
+		fmt.Printf("Process %v : %s", myBoxID, errMsg)
 	}
 }
 
@@ -27,7 +27,7 @@ func debugPrintf(s string, a ...interface{}) {
 func fatalServerErrorf(s string, a ...interface{}) {
 	shouldRun = false
 	msg := fmt.Sprintf(s, a...)
-	fmt.Printf("Error : process %v : %v", myPhysID, msg)
+	fmt.Printf("Error : process %v : %v", myBoxID, msg)
 	debug.PrintStack()
 	os.Exit(1)
 }

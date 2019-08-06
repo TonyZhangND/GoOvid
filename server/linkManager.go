@@ -24,7 +24,7 @@ import (
 // Note: always lm[myPhysId] = nil, since a server does not need a link
 // with itself.
 type linkManager struct {
-	manager       map[c.ProcessID]*link
+	manager       map[c.BoxID]*link
 	masterConn    net.Conn    // connection with the master program
 	serverOutChan chan string // used to stream server messages to main server loop
 	masterOutChan chan string // used to stream master messages to main server loop
@@ -32,85 +32,98 @@ type linkManager struct {
 }
 
 // Constructor for linkManager
-// It takes a slice of all known process IDs, and initializes a
-// connTracker lm with lm[p]=nil for all p in knownProcesses.
-func newLinkManager(knownProcesses []c.ProcessID, sOutChan chan string,
+// It takes a slice of all known box IDs, and initializes a
+// connTracker lm with lm[p]=nil for all p in knownBoxes.
+func newLinkManager(knownBoxes []c.BoxID, sOutChan chan string,
 	mOutChan chan string) *linkManager {
-	t := make(map[c.ProcessID]*link)
-	for _, pid := range knownProcesses {
-		t[pid] = nil
+	t := make(map[c.BoxID]*link)
+	for _, bid := range knownBoxes {
+		t[bid] = nil
 	}
 	return &linkManager{manager: t, serverOutChan: sOutChan, masterOutChan: mOutChan}
 }
 
-// Marks a process as down in lm and de-registers its link object
-func (lm *linkManager) markAsDown(pid c.ProcessID) {
+// Marks a box as down in lm and de-registers its link object
+func (lm *linkManager) markAsDown(bid c.BoxID) {
 	lm.RLock()
-	link, ok := lm.manager[pid]
+	link, ok := lm.manager[bid]
 	if link == nil {
 		defer lm.RUnlock()
 		return
 	}
 	lm.RUnlock()
 	if !ok {
-		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", bid)
 	}
 	lm.Lock()
-	lm.manager[pid] = nil
+	lm.manager[bid] = nil
 	lm.Unlock()
 }
 
-// Marks a process as up in lm and registers its link object
-func (lm *linkManager) markAsUp(pid c.ProcessID, handler *link) {
+// Marks a box as up in lm and registers its link object
+func (lm *linkManager) markAsUp(bid c.BoxID, handler *link) {
 	lm.RLock()
-	link, ok := lm.manager[pid]
-	if link != nil && pid != myPhysID {
-		fatalServerErrorf("Link to %v already established!\n", pid)
+	link, ok := lm.manager[bid]
+	if link != nil && bid != myBoxID {
+		fatalServerErrorf("Link to %v already established!\n", bid)
 	}
 	lm.RUnlock()
 	if !ok {
-		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", bid)
 	}
 	lm.Lock()
-	lm.manager[pid] = handler
+	lm.manager[bid] = handler
 	lm.Unlock()
 }
 
-// Returns true iff process pid is up in lm
-func (lm *linkManager) isUp(pid c.ProcessID) bool {
+// Returns true iff box bid is up in lm
+func (lm *linkManager) isUp(bid c.BoxID) bool {
 	lm.RLock()
-	link, ok := lm.manager[pid]
+	link, ok := lm.manager[bid]
 	if !ok {
-		fatalServerErrorf("Process %v does not exist in failure detector\n", pid)
+		fatalServerErrorf("Process %v does not exist in failure detector\n", bid)
 	}
 	defer lm.RUnlock()
 	return link != nil
 }
 
-// Returns a slice containing the list of up processes in lm
-func (lm *linkManager) getAllUp() []c.ProcessID {
+// Returns a slice containing the list of up boxes in lm
+func (lm *linkManager) getAllUp() []c.BoxID {
 	// The comparator function for sorting a slice of processIDs
-	result := make([]c.ProcessID, 0)
+	result := make([]c.BoxID, 0)
 	lm.RLock()
-	for pid, link := range lm.manager {
+	for bid, link := range lm.manager {
 		// find the nodes that are up
 		if link != nil {
-			result = append(result, pid)
+			result = append(result, bid)
 		}
 	}
-	result = append(result, myPhysID) // Cogito ergo sum
+	result = append(result, myBoxID) // Cogito ergo sum
 	defer lm.RUnlock()
 	return result
 }
 
-// Returns a slice containing the list of down processes in lm
-func (lm *linkManager) getAllDown() []c.ProcessID {
-	result := make([]c.ProcessID, 0)
+// Returns a slice containing the list of down boxes in lm
+func (lm *linkManager) getAllDown() []c.BoxID {
+	result := make([]c.BoxID, 0)
 	lm.RLock()
 	for pid, link := range lm.manager {
-		if link == nil && pid != myPhysID { // cogito ergo sum
+		if link == nil && pid != myBoxID { // cogito ergo sum
 			result = append(result, pid)
 		}
+	}
+	defer lm.RUnlock()
+	return result
+}
+
+// Returns a slice containing the list of boxes in lm
+func (lm *linkManager) getAllKnown() []c.BoxID {
+	lm.RLock()
+	result := make([]c.BoxID, len(lm.manager))
+	i := 0
+	for bid := range lm.manager {
+		result[i] = bid
+		i++
 	}
 	defer lm.RUnlock()
 	return result
@@ -120,7 +133,7 @@ func (lm *linkManager) getAllDown() []c.ProcessID {
 // Applies Ovid message format and headers
 func (lm *linkManager) broadcast(msg string) {
 	lm.serverOutChan <- msg // first send to myself
-	s := fmt.Sprintf("msg %v %s\n", myPhysID, msg)
+	s := fmt.Sprintf("msg %v %s\n", myBoxID, msg)
 	lm.RLock()
 	for _, link := range lm.manager {
 		if link != nil {
@@ -137,18 +150,18 @@ func (lm *linkManager) sendToMaster(msg string) {
 	checkFatalServerErrorf(err, "Can't send msg '%v' to master: %v\n", msg, err)
 }
 
-// Dials for new connections to all pid < my pid
+// Dials for new connections to all bid < my bid, using build-in string comp
 func (lm *linkManager) dialForConnections() {
 	debugPrintf("Dialing for peer connections\n")
 	for shouldRun {
 		down := linkMgr.getAllDown()
-		for _, pid := range down {
-			if pid < myPhysID && !linkMgr.isUp(pid) {
-				dialingAddr := fmt.Sprintf("%s:%d", gridIP, uint16(basePort)+uint16(pid))
-				c, err := net.DialTimeout("tcp", dialingAddr,
+		for _, bid := range down {
+			if bid < myBoxID && !linkMgr.isUp(bid) {
+				// conviniently, the bid is the tcp addr
+				c, err := net.DialTimeout("tcp", string(bid),
 					20*time.Millisecond)
 				if err == nil {
-					l := newLinkKnownOther(c, pid, lm.serverOutChan)
+					l := newLinkKnownOther(c, bid, lm.serverOutChan)
 					go l.handleConnection()
 				}
 			}
@@ -160,8 +173,8 @@ func (lm *linkManager) dialForConnections() {
 // Listens and establishes new connections
 func (lm *linkManager) listenForConnections() {
 	debugPrintf("Listening for peer connections\n")
-	listenerAddr := fmt.Sprintf("%s:%d", gridIP, uint16(basePort)+uint16(myPhysID))
-	l, err := net.Listen("tcp", listenerAddr)
+	// conviniently, the myBoxID is my tcp addr
+	l, err := net.Listen("tcp", string(myBoxID))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
