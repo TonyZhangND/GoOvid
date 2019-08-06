@@ -21,7 +21,7 @@ for f in test_list:
         if f[len(f) - len('.input'):] == '.input':
             fn = f[:len(f) - len('.input')]
             print(fn),
-            os.system('python master.py < ' + abs_f + \
+            os.system('python master.py tests/test.json < ' + abs_f + \
                       ' 2> ' + join(test_output, fn+'.err') + \
                       ' > ' + join(test_output, fn+'.output'))
 

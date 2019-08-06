@@ -1,0 +1,162 @@
+{
+    "0" : {
+        "type" : "chat",
+        "box" : "127.0.0.1:5000", 
+        "attrs" : {
+            "myname" : "client1"
+        },
+        "routes": {
+            "2" : { "20" : 100 }
+        }
+    }, 
+    "1" : {
+        "type" : "chat",
+        "box" : "127.0.0.1:5001", 
+        "attrs" : {
+            "myname" : "client1"
+        },
+        "routes": {
+            "2" : { "20" : 100 }
+        }
+    }, 
+    "2" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5002",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "3" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5003",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "4" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5004",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "5" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5005",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "6" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5006",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "7" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5007",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "8" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5008",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "9" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5009",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "10" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5010",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "11" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5011",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "12" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5012",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "13" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5013",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "14" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5014",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    },
+    "15" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5015",
+        "attrs" : {
+            "myname" : "client2"
+        },
+        "routes": {
+            "2" : { "10" : 100 }
+        }
+    }
+}

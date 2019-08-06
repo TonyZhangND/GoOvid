@@ -1,0 +1,16 @@
+127.0.0.1:5000 start 10000
+127.0.0.1:5001 start 10001
+127.0.0.1:5002 start 10002
+127.0.0.1:5003 start 10003
+127.0.0.1:5004 start 10004
+sleep 1000
+127.0.0.1:5001 broadcast I'm actually a cat
+127.0.0.1:5001 broadcast Tyrannosaurus Cat
+127.0.0.1:5001 broadcast Stegosaurus Cat
+127.0.0.1:5001 broadcast Triceratops Cat
+sleep 1000
+127.0.0.1:5000 get
+127.0.0.1:5001 get
+127.0.0.1:5002 get
+127.0.0.1:5003 get
+127.0.0.1:5004 get

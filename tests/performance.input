@@ -1,0 +1,18 @@
+127.0.0.1:5000 start 10000
+127.0.0.1:5001 start 10001
+127.0.0.1:5002 start 10002
+127.0.0.1:5001 broadcast m1
+127.0.0.1:5001 broadcast m2
+127.0.0.1:5001 broadcast m3
+127.0.0.1:5001 broadcast m4
+127.0.0.1:5001 broadcast m5
+127.0.0.1:5001 broadcast m6
+127.0.0.1:5001 broadcast m7
+127.0.0.1:5001 broadcast m8
+127.0.0.1:5001 broadcast m9
+127.0.0.1:5001 broadcast m10
+sleep 1000
+127.0.0.1:5000 get
+127.0.0.1:5001 get
+127.0.0.1:5002 get
+exit

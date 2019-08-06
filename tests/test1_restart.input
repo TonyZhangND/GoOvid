@@ -1,0 +1,12 @@
+127.0.0.1:5000 start 10000
+127.0.0.1:5000 broadcast I’m alive!
+127.0.0.1:5000 alive
+127.0.0.1:5000 broadcast I’m still alive!
+127.0.0.1:5000 crash
+127.0.0.1:5000 start 10000
+127.0.0.1:5000 get
+127.0.0.1:5000 crash
+127.0.0.1:5000 start 10000
+127.0.0.1:5000 broadcast I’m alive again!
+sleep 1000
+127.0.0.1:5000 get

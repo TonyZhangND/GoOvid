@@ -1,7 +1,9 @@
 .DS_Store
 .vscode/
 GoOvid.code-workspace
+
 ovid
+test_output/
 
 chatroom/test_output
 
