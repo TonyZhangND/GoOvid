@@ -77,38 +77,36 @@ class ClientHandler(Thread):
             pass
 
 
-def kill(index):
+def kill(boxID):
     global wait_ack, threads
     wait = wait_ack
     while wait:
         time.sleep(0.01)
         wait = wait_ack
-    pid = int(index)
-    if pid >= 0:
-        if pid not in threads:
-            print('Master or testcase error!')
-            return
-        threads[pid].kill()
+    if boxID not in threads:
+        print('Master or testcase error!')
+        return
+    threads[boxID].kill()
 
 
-def send(index, data, set_wait_ack=False):
+def send(boxID, data, set_wait_ack=False):
     global threads, wait_ack
     wait = wait_ack
     while wait:
         time.sleep(0.01)
         wait = wait_ack
-    pid = int(index)
-    if pid >= 0:
-        if pid not in threads:
-            print('Master or testcase error!')
-            return
-        if set_wait_ack:
-            wait_ack = True
-        threads[pid].send(data)
+    # pid = int(index)
+    # if pid >= 0:
+    if boxID not in threads:
+        print('Master or testcase error!')
         return
     if set_wait_ack:
         wait_ack = True
-    threads[pid].send(data)
+    threads[boxID].send(data)
+    return
+    # if set_wait_ack:
+    #     wait_ack = True
+    # threads[pid].send(data)
 
 
 def exit(force=False):
@@ -133,7 +131,7 @@ def timeout():
     exit(True)
 
 
-def main(debug=False):
+def main(configFile, debug=False):
     global threads, wait_ack
     timeout_thread = Thread(target=timeout, args=())
     timeout_thread.setDaemon(True)
@@ -160,7 +158,7 @@ def main(debug=False):
                 print("Received exit command. Terminating...")
             exit()
 
-        sp1 = line.split(None, 1)
+        sp1 = line.split(None, 1) 
         sp2 = line.split()
         if len(sp1) != 2:  # validate input
             print("Invalid command: " + line)
@@ -170,39 +168,35 @@ def main(debug=False):
             time.sleep(float(sp1[1]) / 1000)
             continue
 
-        try:
-            pid = int(sp2[0])  # first field is pid
-        except ValueError:
-            print("Invalid pid: " + sp2[0])
-            exit(True)
+        boxID = sp2[0]  # first field is boxID
 
         cmd = sp2[1]  # second field is command
         if cmd == 'start':
             try:
-                port = int(sp2[3])
+                port = int(sp2[2])
             except ValueError:
-                print("Invalid port: " + sp2[3])
+                print("Invalid port: " + sp2[2])
                 exit(True)
 
             if debug:
-                process = subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]], preexec_fn=os.setsid)
+                process = subprocess.Popen(['./process', configFile, boxID, sp2[2]], preexec_fn=os.setsid)
             else:
-                process = subprocess.Popen(['./process', str(pid), sp2[2], sp2[3]], stdout=open('/dev/null', 'w'),
+                process = subprocess.Popen(['./process', configFile, boxID, sp2[2]], stdout=open('/dev/null', 'w'),
                                            stderr=open('/dev/null', 'w'), preexec_fn=os.setsid)
 
             # sleep for a while to allow the process be ready
             time.sleep(3)
 
             # connect to the port of the pid
-            handler = ClientHandler(pid, address, port, process)
-            threads[pid] = handler
+            handler = ClientHandler(boxID, address, port, process)
+            threads[boxID] = handler
             handler.start()
         elif cmd == 'get' or cmd == 'alive':
-            send(pid, sp1[1], set_wait_ack=True)
+            send(boxID, sp1[1], set_wait_ack=True)
         elif cmd == 'broadcast':
-            send(pid, sp1[1])
+            send(boxID, sp1[1])
         elif cmd == 'crash':
-            kill(pid)
+            kill(boxID)
             time.sleep(1)  # sleep for a bit so that crash is detected
         else:
             print("Invalid command: " + line)
@@ -210,7 +204,7 @@ def main(debug=False):
 
 if __name__ == '__main__':
     debug = False
-    if len(sys.argv) > 1 and sys.argv[1] == 'debug':
+    if len(sys.argv) > 2 and sys.argv[2] == 'debug':
         debug = True
 
-    main(debug)
+    main(sys.argv[1], debug)

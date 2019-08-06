@@ -46,7 +46,7 @@ involved and a re-designed testing framework is needed.
 To start the master, one runs 
 
 ```
-python2 master.py <configFile> [-debug]
+python2 master.py <configFile> [debug]
 ```
 
 Below are the user commands for GoOvid/master.py, and their 
@@ -54,7 +54,7 @@ behavior.
 
 |Input -> Master             |Master -> Server            |  Behavior                                    |
 |----------------------	    |-------------------	         |-------------------------------------        |
-| `<boxID> start`            | -                 	         | master starts the given box              	|
+| `<boxID> start <port>`     | -                 	         | master starts the given box with `./process <configFile> <boxID> <port>`|
 | `exit`                     | -                 	         | master calls `./stopall` then exits       	|
 | `sleep <n>`                | -                 	         | master sleeps for `n` milliseconds          |
 | `<boxID> crash`            | -                  	    | master crashes the given box              	|
