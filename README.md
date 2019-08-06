@@ -13,9 +13,11 @@ For the present work, I'm writing everything Go, to practice architecting my own
 
 This directory has the following folders:
 
-	chatroom: A toy system used as a warm up exercise. It is a redesign of an undergrad project that I originally did in Python.
+	chatroom: A toy system used as a warm up exercise. It is a redesign of an undergrad project that I
+               originally did in Python.
 	commons:  Package containing common GoOvid definitions.
-	configs:  Contains the GoOvid configuration files (.json), and Go package with the utilities to parse those files.
+	configs:  Contains the GoOvid configuration files (.json), and Go package with the utilities to 
+               parse those files.
 	server:   Package containing the main server layer of GoOvid.
 
 ## Why this
@@ -50,7 +52,7 @@ python2 master.py <configFile> [-debug]
 Below are the user commands for GoOvid/master.py, and their 
 behavior.
 
-|Input $\rightarrow{}$ Master|Master $\rightarrow{}$ Server| Behavior                                    |
+|Input $$\rightarrow{}$$ Master|Master $$\rightarrow{}$$ Server| Behavior                                    |
 |----------------------	    |-------------------	         |-------------------------------------        |
 | `<boxID> start`            | -                 	         | master starts the given box              	|
 | `exit`                     | -                 	         | master calls `./stopall` then exits       	|
@@ -63,7 +65,7 @@ behavior.
 Below are the responses that servers should return to the master for the 
 respective commands.
 
-|Server $\rightarrow{}$ Master| Description |
+|Server $$\rightarrow{}$$ Master| Description |
 |----------------------	    |-------------------	         |
 | `alive <id1>,<id2>,...`    | a box asked to return all alive boxes responds by giving a list of the box ids in ascending order  | 
 | `messages <m1>,<m2>,...`   | a box asked to return its messages responds by giving a list of all messages it has received in FIFO order |
