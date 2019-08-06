@@ -31,7 +31,7 @@ type Agent interface {
 // AgentInfo is a struct containing data common to all agents
 type AgentInfo struct {
 	Type     AgentType
-	Box      c.BoxAddr
+	Box      c.BoxID
 	RawAttrs map[string]interface{}
 	Routes   map[c.ProcessID]c.Route
 }

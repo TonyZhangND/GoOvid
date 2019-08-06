@@ -1,7 +1,6 @@
 package configs
 
 import (
-	"net"
 	"testing"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
@@ -17,8 +16,8 @@ func TestParser_Chat(t *testing.T) {
 	if agent.Type != a.Chat {
 		t.Errorf("agent 10 has type %d; want %d", agent.Type, a.Chat)
 	}
-	if agent.Box.Equal(&c.BoxAddr{Host: net.ParseIP("127.0.0.1"), Port: c.PortNum(5001)}) {
-		t.Errorf("agent 10 has box %s; want %s", agent.Box.String(), "127.0.0.1:5000")
+	if agent.Box != "127.0.0.1:5000" {
+		t.Errorf("agent 10 has box %s; want %s", agent.Box, "127.0.0.1:5000")
 	}
 	for k, v := range agent.RawAttrs {
 		switch k {
