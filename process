@@ -1,0 +1,8 @@
+#!/bin/bash
+
+config=$1
+boxAddr=$2
+masterPort=$3
+
+# Run the server in the background
+./ovidServer $config $boxAddr $masterPort &

@@ -81,9 +81,8 @@ func handleServerMsg(data string) {
 	msgLog.appendMsg(data)
 }
 
-// Main method for server
-// Populates the global variables and starts the linkManager
-func initAndRunServer(boxAddr string, knownProcesses []c.BoxID, mstrPort c.PortNum) {
+// InitAndRunServer is the main method of a server
+func InitAndRunServer(boxID c.BoxID, knownProcesses []c.BoxID, mstrPort c.PortNum) {
 
 	if masterPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
@@ -96,14 +95,14 @@ func initAndRunServer(boxAddr string, knownProcesses []c.BoxID, mstrPort c.PortN
 		os.Exit(1)
 	}
 
-	myBoxID = c.ParseBoxAddr(boxAddr)
+	// Populate the global variables and starts the linkManager
+	myBoxID = boxID
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
 	shouldRun = true
 
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
-
 	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
 	msgLog = newMessageLog()
 	debugPrintf("Launching server...\n")
