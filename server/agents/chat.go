@@ -42,7 +42,7 @@ func (ca *ChatAgent) Halt() {
 func (ca *ChatAgent) Deliver(data string, port c.PortNum) {
 	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 	sender, msg := dataSlice[0], dataSlice[1]
-	fmt.Printf("%s > %s\n", sender, msg)
+	fmt.Printf("\n%s > %s\n%s > ", sender, msg, ca.userName)
 }
 
 // Run begins the execution of the ca agent.

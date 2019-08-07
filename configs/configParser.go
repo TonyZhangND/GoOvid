@@ -73,7 +73,7 @@ func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		c.FatalOvidErrorf("%v encountered reading %v", err, configFile)
+		c.FatalOvidErrorf("Cannot read %s. %v \n", configFile, err)
 	}
 
 	// Decode the file into a map[string]interface{}

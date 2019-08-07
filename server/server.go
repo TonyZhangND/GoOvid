@@ -229,18 +229,14 @@ func InitAndRunServer(
 			handleMasterMsg(<-masterInChan)
 		}
 	}()
-	go func() {
+	// run my agents
+	for _, agent := range myAgents {
+		go (*agent).Run()
+	}
+	for shouldRun {
 		for shouldRun {
 			handleServerMsg(<-serverInChan)
 		}
-	}()
-	// run my agents
-	for _, agent := range myAgents {
-		(*agent).Run()
-	}
-	for shouldRun {
-		// This is here so that the program does not exit when the agents
-		// don't have an infinite loop in Run()
 	}
 	debugPrintf("Terminating\n")
 }
