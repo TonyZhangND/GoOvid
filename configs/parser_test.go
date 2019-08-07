@@ -25,13 +25,20 @@ func TestParser_Chat(t *testing.T) {
 			if v.(string) != "client1" {
 				t.Errorf("agent 10 has name %v; want %s", v, "client1")
 			}
+		case "contacts":
+			if len(v.([]interface{})) != 1 {
+				t.Errorf("agent 10 has contact %v; want %s", v, "[20]")
+			}
+			if v.([]interface{})[0].(string) != "20" {
+				t.Errorf("agent 10 has contact %v; want %s", v, "[20]")
+			}
 		default:
 			t.Errorf("agent 10 has invalid attr %s", k)
 		}
 	}
 	for vid, rt := range agent.Routes {
 		switch int(vid) {
-		case 2:
+		case 20:
 			if int(rt.DestID) != 20 || int(rt.DestPort) != 100 {
 				t.Errorf("agent 10 has invalid route %v, %v", vid, rt)
 			}
@@ -47,6 +54,13 @@ func TestParser_Chat(t *testing.T) {
 		case "myname":
 			if v.(string) != "client2" {
 				t.Errorf("agent 20 has name %v; want %s", v, "client2")
+			}
+		case "contacts":
+			if len(v.([]interface{})) != 1 {
+				t.Errorf("agent 20 has contact %v; want %s", v, "[10]")
+			}
+			if v.([]interface{})[0].(string) != "10" {
+				t.Errorf("agent 20 has contact %v; want %s", v, "[10]")
 			}
 		default:
 			t.Errorf("agent 20 has invalid attr %s", k)

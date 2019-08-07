@@ -3,20 +3,22 @@
         "type" : "chat",
         "box" : "127.0.0.1:5000", 
         "attrs" : {
-            "myname" : "client1"
+            "myname" : "client1",
+            "contacts" : ["20"]
         },
         "routes": {
-            "2" : { "20" : 100 }
+            "20" : { "20" : 100 }
         }
     }, 
     "20" : {
         "type" : "chat", 
         "box" : "127.0.0.1:5001",
         "attrs" : {
-            "myname" : "client2"
+            "myname" : "client2",
+            "contacts" : ["10"]
         },
         "routes": {
-            "2" : { "10" : 100 }
+            "10" : { "10" : 100 }
         }
     }
 }
