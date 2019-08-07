@@ -36,12 +36,13 @@ This directory has the following folders:
 
 ### Agents
 
-Agents are the fundamental building blocks of GoOvid. Specifically, an agent is a 
+Agents are the fundamental building blocks of GoOvid. Specifically, an **agent** is a 
 self-contained state machine that transitions in response to messages it receives and 
 may produce output messages for other agents. Services are implemented by an agent or a 
-group of agents. For instance, a KVS agent could implement a monolithic key-value store;
-an Acceptor agent could implement a paxos acceptor; and together a group of Learner, Leader
-and Acceptor agents could implement Paxos.
+group of agents. For instance, a single KVS agent could implement a monolithic, non-fault-
+tolerant key-value store; an Acceptor agent could implement a paxos acceptor; and together 
+a group of Learner, Leader and Acceptor agents could implement a distributed, fault-tolerant
+key-value store using the Paxos protocol.
 
 The type of agents currently implemented in this repository includes:
 
@@ -57,10 +58,34 @@ To implement a new type of agent, one follows the below recipe:
 
 ### Boxes
 
+A **box** is a container that is a single unit of failure in GoOvid. It is implemented user 
+process running on the OS, and defined in the `server` package. Hence, a host machine can 
+run multiple boxes, each of which can contain multiple agents. Boxes are completely 
+transparent to the agents it contains -- an agent has no awareness of the box it is on, 
+or of the other agents that are on the same box. Every box maintains a TCP connection 
+with every other box to form a complete network graph.
+
 ### Configuration files
+
+A **configuration** defines a system in GoOvid. It specifies the mapping of agents to 
+boxes, the attributes of each agent, and the routing table of each agent.
+
+Configuration files are written in the JSON language, which can then be read by GoOvid.
+See GoOvid/configs/chat.json for an example. In the file, each agent is indexed by a unique
+global identifier, of which the agent is not necessarily aware unless made explicit as an
+atribute. Each box is defined by its external IP interface, i.e. an `"[IP]:[port]"` string.
+
+Each JSON agent object has the following characteristics:
+
+* `type` -- A string describing the type of the agent, to be decoded by the parser
+* `box` -- The box on which the agent resides
+* `attrs` -- User-defined attributes for the particular agent. This can be an arbitrary JSON structure.
+* `routes` -- The routing table of the agent. Each entry is defined by `<virtual dest> : { <physical dest> : <dest port> }`. 
+  -  Since each agent is not necessarily aware of its physical ID or that of others, it sends messages to fixed virtual destinations. Each virtual destination points to the physical ID of the destination agent, and the port on which the server should deliver the message.
 
 ### Starting a grid
 
+A running system in GoOvid is called a **grid**. GoOvid parses a configuration file and automatically contructs a grid according to that configuration, agents, boxes and all.
 
 ## Testing the servers
 
