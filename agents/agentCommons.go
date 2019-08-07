@@ -49,3 +49,16 @@ type AgentInfo struct {
 	RawAttrs map[string]interface{}
 	Routes   map[c.ProcessID]c.Route
 }
+
+// NewAgent returns a new, empty struct corresponding to the agent type t
+func NewAgent(t AgentType) Agent {
+	switch t {
+	case Chat:
+		return &ChatAgent{}
+	case Dummy:
+		return &DummyAgent{}
+	default:
+		c.FatalOvidErrorf("Invalid agent type for agent %v\n", t)
+		return nil
+	}
+}

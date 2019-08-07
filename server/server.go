@@ -147,15 +147,7 @@ func initAgents() map[c.ProcessID]*a.Agent {
 	for k, agentInfo := range gridConfig {
 		if agentInfo.Box == myBoxID {
 			// allocate the struct
-			var ag a.Agent
-			switch agentInfo.Type {
-			case a.Chat:
-				ag = &a.ChatAgent{}
-			case a.Dummy:
-				ag = &a.DummyAgent{}
-			default:
-				c.FatalOvidErrorf("Invalid agent type for agent %v:%v\n", k, *agentInfo)
-			}
+			ag := a.NewAgent(agentInfo.Type)
 			myAg[k] = &ag
 		}
 	}
