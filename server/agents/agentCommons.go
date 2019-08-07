@@ -24,7 +24,7 @@ type Agent interface {
 	// Run starts the agent's main loop, if any
 	Run()
 	// Deliver delivers msg to the agent
-	Deliver(msg string)
+	Deliver(data string)
 	// Stops the agent from processing new messages
 	Halt()
 }

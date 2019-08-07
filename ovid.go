@@ -17,17 +17,5 @@ func main() {
 	masterPort, err := strconv.ParseUint(os.Args[3], 10, 16)
 	comm.CheckFatalOvidErrorf(err, "Cannot parse masterPort %v (%v)\n", os.Args[3], err)
 	agentMap := *conf.Parse(config)
-
-	// get a list of known boxes
-	knownBoxSet := make(map[comm.BoxID]int)
-	for _, agent := range agentMap {
-		knownBoxSet[agent.Box] = 1
-	}
-	knownBoxes := make([]comm.BoxID, len(knownBoxSet))
-	i := 0
-	for bid := range knownBoxSet {
-		knownBoxes[i] = bid
-		i++
-	}
-	serv.InitAndRunServer(myBox, knownBoxes, comm.PortNum(masterPort))
+	serv.InitAndRunServer(myBox, agentMap, comm.PortNum(masterPort))
 }

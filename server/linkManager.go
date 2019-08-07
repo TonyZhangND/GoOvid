@@ -141,7 +141,17 @@ func (lm *linkManager) broadcast(msg string) {
 		}
 	}
 	lm.RUnlock()
-	return
+}
+
+// Sends msg to destBox, given that destBox is up
+// Applies Ovid message format and headers
+func (lm *linkManager) send(destBox c.BoxID, msg string) {
+	lm.RLock() // We lock so that the link won't be pulled from beneath out feet
+	if lm.isUp(destBox) {
+		s := fmt.Sprintf("msg %v %s\n", myBoxID, msg)
+		lm.manager[destBox].send(s)
+	}
+	lm.RLock()
 }
 
 // Sends msg string to the master
@@ -217,7 +227,7 @@ func (lm *linkManager) connectAndHandleMaster() {
 func (lm *linkManager) run() {
 	go lm.dialForConnections()
 	go lm.listenForConnections()
-	lm.connectAndHandleMaster()
+	// lm.connectAndHandleMaster()
 	// Rather than running connectAndHandleMaster() as an async goroutine,
 	// we defer the goroutine to within connectAndHandleMaster(). This forces
 	// the main server loop to progress only after the master has connected.

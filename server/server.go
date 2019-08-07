@@ -7,16 +7,21 @@ package server
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 	"sort"
 	"strings"
+	"time"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
+	a "github.com/TonyZhangND/GoOvid/server/agents"
 )
 
 var (
-	myBoxID    c.BoxID
 	masterIP   string
 	masterPort c.PortNum
+	gridConfig map[c.ProcessID]*a.AgentInfo
+	myBoxID    c.BoxID
+	myAgents   map[c.ProcessID]*a.Agent
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
 	msgLog     *messageLog
@@ -29,6 +34,13 @@ func serverInfo() string {
 		"Boxes in grid: %v\n"+
 		"masterPort: %d\n",
 		myBoxID, linkMgr.getAllKnown(), masterPort)
+}
+
+// Sends a message to phyDest
+func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
+	destBox := gridConfig[phyDest].Box
+	s := fmt.Sprintf("%d %d %d %s", senderID, phyDest, destPort, msg)
+	linkMgr.send(destBox, s)
 }
 
 // Responds to an "alive" command from the master
@@ -81,9 +93,70 @@ func handleServerMsg(data string) {
 	msgLog.appendMsg(data)
 }
 
-// InitAndRunServer is the main method of a server
-func InitAndRunServer(boxID c.BoxID, knownProcesses []c.BoxID, mstrPort c.PortNum) {
+// Helper: generates a slice containing all boxes in this configuration
+func getAllBoxes() []c.BoxID {
+	if gridConfig == nil {
+		c.FatalOvidErrorf("grid cofiguration not initialized\n")
+	}
+	boxSet := make(map[c.BoxID]int)
+	for _, agentInfo := range gridConfig {
+		boxSet[agentInfo.Box] = 1
+	}
+	boxes := make([]c.BoxID, len(boxSet))
+	i := 0
+	for bid := range boxSet {
+		boxes[i] = bid
+		i++
+	}
+	return boxes
+}
 
+// Helper: initializes all agents on this box
+func initAgents() map[c.ProcessID]*a.Agent {
+	if gridConfig == nil {
+		c.FatalOvidErrorf("grid cofiguration not initialized\n")
+	}
+	// Make map containing all agent structs on this box
+	myAg := make(map[c.ProcessID]*a.Agent)
+	for k, agentInfo := range gridConfig {
+		if agentInfo.Box == myBoxID {
+			// allocate the struct
+			var ag a.Agent
+			switch agentInfo.Type {
+			case a.Chat:
+				ag = &a.ChatAgent{}
+			default:
+				c.FatalOvidErrorf("Invalid agent type for agent %v:%v\n", k, *agentInfo)
+			}
+			myAg[k] = &ag
+		}
+	}
+
+	// Initialize and run each agent on this box
+	for agentID, agent := range myAg {
+		// Create custom send() func using closure
+		sendMsg := func(vDest c.ProcessID, msg string) {
+			phyDest := gridConfig[agentID].Routes[vDest].DestID
+			destPort := gridConfig[agentID].Routes[vDest].DestPort
+			send(agentID, phyDest, destPort, msg)
+		}
+
+		// Create custom error() func using closure
+		fatalAgentErrorf := func(s string, a ...interface{}) {
+			errMsg := fmt.Sprintf(s, a...)
+			fmt.Printf("Error : Ovid : %s", errMsg)
+			debug.PrintStack()
+			(*agent).Halt()
+		}
+		// Initialize the agent
+		(*agent).Init(gridConfig[agentID].RawAttrs, sendMsg, fatalAgentErrorf)
+	}
+	return myAg
+}
+
+// InitAndRunServer is the main method of a server
+func InitAndRunServer(boxID c.BoxID, config map[c.ProcessID]*a.AgentInfo, mstrPort c.PortNum) {
+	// Check for illegal values
 	if mstrPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
 			"as masterPort\n", masterPort)
@@ -95,19 +168,26 @@ func InitAndRunServer(boxID c.BoxID, knownProcesses []c.BoxID, mstrPort c.PortNu
 		os.Exit(1)
 	}
 
-	// Populate the global variables and starts the linkManager
+	// Populate the global variables and start the linkManager
+	gridConfig = config
 	myBoxID = boxID
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
 	shouldRun = true
-
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
-	linkMgr = newLinkManager(knownProcesses, serverInChan, masterInChan)
+	linkMgr = newLinkManager(getAllBoxes(), serverInChan, masterInChan)
 	msgLog = newMessageLog()
 	debugPrintf("Launching server...\n")
 	linkMgr.run()
+	time.Sleep(1 * time.Second)
 	debugPrintf(serverInfo())
+
+	// Initialize and run my agents
+	myAgents = initAgents()
+	for _, agent := range myAgents {
+		(*agent).Run()
+	}
 
 	// main loop
 	go func() {

@@ -55,7 +55,7 @@ func ParseBoxAddr(s string) BoxID {
 // FatalOvidErrorf prints the error messange and kills the entire program
 func FatalOvidErrorf(s string, a ...interface{}) {
 	errMsg := fmt.Sprintf(s, a...)
-	fmt.Printf("Error : Ovid : %v", errMsg)
+	fmt.Printf("Error : Ovid : %s", errMsg)
 	debug.PrintStack()
 	os.Exit(1)
 }
