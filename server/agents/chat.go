@@ -17,7 +17,7 @@ type ChatAgent struct {
 	isActive         bool
 }
 
-// Init fills the empty struct with this agent's fields and attributes
+// Init fills the empty struct with this agent's fields and attributes.
 func (ca *ChatAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
 	fatalAgentErrorf func(errMsg string, a ...interface{})) {
@@ -31,19 +31,20 @@ func (ca *ChatAgent) Init(attrs map[string]interface{},
 	ca.isActive = false
 }
 
-// Halt stops the execution of ca
+// Halt stops the execution of ca.
 func (ca *ChatAgent) Halt() {
 	ca.isActive = false
 }
 
-// Deliver a message of the format "<sender name> <contents>"
-func (ca *ChatAgent) Deliver(data string) {
+// Deliver a message of the format "<sender name> <contents>".
+// The chat agent ignores the port.
+func (ca *ChatAgent) Deliver(data string, port c.PortNum) {
 	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 	sender, msg := dataSlice[0], dataSlice[1]
 	fmt.Printf("%s > %s\n", sender, msg)
 }
 
-// Run begins the execution of the ca agent
+// Run begins the execution of the ca agent.
 func (ca *ChatAgent) Run() {
 	reader := bufio.NewReader(os.Stdin)
 	ca.isActive = true
@@ -55,7 +56,7 @@ func (ca *ChatAgent) Run() {
 			ca.fatalAgentErrorf("Invalid input %v in chatAgent\n", input)
 		}
 		for _, vDest := range ca.contacts {
-			ca.send(vDest, fmt.Sprintf("%s %s", ca.userName, input))
+			ca.send(vDest, fmt.Sprintf("%s %s", ca.userName, strings.TrimSpace(input)))
 		}
 	}
 }

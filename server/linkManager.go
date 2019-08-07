@@ -26,7 +26,7 @@ import (
 type linkManager struct {
 	manager       map[c.BoxID]*link
 	masterConn    net.Conn    // connection with the master program
-	serverOutChan chan string // used to stream server messages to main server loop
+	serverOutChan chan string //used to stream inter-server messages to main server loop
 	masterOutChan chan string // used to stream master messages to main server loop
 	sync.RWMutex
 }
@@ -34,13 +34,17 @@ type linkManager struct {
 // Constructor for linkManager
 // It takes a slice of all known box IDs, and initializes a
 // connTracker lm with lm[p]=nil for all p in knownBoxes.
-func newLinkManager(knownBoxes []c.BoxID, sOutChan chan string,
-	mOutChan chan string) *linkManager {
+func newLinkManager(knownBoxes []c.BoxID,
+	sOutChan chan string,
+	mstrOutChan chan string) *linkManager {
 	t := make(map[c.BoxID]*link)
 	for _, bid := range knownBoxes {
 		t[bid] = nil
 	}
-	return &linkManager{manager: t, serverOutChan: sOutChan, masterOutChan: mOutChan}
+	return &linkManager{
+		manager:       t,
+		serverOutChan: sOutChan,
+		masterOutChan: mstrOutChan}
 }
 
 // Marks a box as down in lm and de-registers its link object
@@ -146,12 +150,17 @@ func (lm *linkManager) broadcast(msg string) {
 // Sends msg to destBox, given that destBox is up
 // Applies Ovid message format and headers
 func (lm *linkManager) send(destBox c.BoxID, msg string) {
-	lm.RLock() // We lock so that the link won't be pulled from beneath out feet
-	if lm.isUp(destBox) {
-		s := fmt.Sprintf("msg %v %s\n", myBoxID, msg)
-		lm.manager[destBox].send(s)
+	if destBox == myBoxID {
+		c.FatalOvidErrorf("Intra-server messages should not reach linkManager layer\n")
+	} else {
+		// Sending to other box
+		lm.RLock() // We lock so that the link won't be pulled from beneath out feet
+		if lm.isUp(destBox) {
+			s := fmt.Sprintf("msg %s\n", msg)
+			lm.manager[destBox].send(s)
+		}
+		lm.RLock()
 	}
-	lm.RLock()
 }
 
 // Sends msg string to the master

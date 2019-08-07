@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,8 +40,14 @@ func serverInfo() string {
 // Sends a message to phyDest
 func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
 	destBox := gridConfig[phyDest].Box
-	s := fmt.Sprintf("%d %d %d %s", senderID, phyDest, destPort, msg)
-	linkMgr.send(destBox, s)
+	if destBox == myBoxID {
+		// if sending to agent on this box
+		(*myAgents[phyDest]).Deliver(msg, destPort)
+	} else {
+		// else sending to agent on some other box
+		s := fmt.Sprintf("%d %d %d %s", senderID, phyDest, destPort, msg)
+		linkMgr.send(destBox, s)
+	}
 }
 
 // Responds to an "alive" command from the master
@@ -90,13 +97,26 @@ func handleMasterMsg(data string) {
 
 // Handles messages from a server
 func handleServerMsg(data string) {
-	msgLog.appendMsg(data)
+	// if for chatroom project
+	if len(strings.Split(data, " ")) == 0 {
+		msgLog.appendMsg(data)
+	} else {
+		// else a GoOvid message to deliver to an agent
+		dataSlice := strings.SplitN(data, " ", 4)
+		_, err := strconv.ParseInt(dataSlice[0], 10, 16) //ignore sender for now
+		checkFatalServerErrorf(err, "Cannot parse sender of incoming message %s\n", data)
+		destID, err := strconv.ParseInt(dataSlice[1], 10, 16)
+		checkFatalServerErrorf(err, "Cannot parse destID of incoming message %s\n", data)
+		destPort, err := strconv.ParseInt(dataSlice[2], 10, 16)
+		checkFatalServerErrorf(err, "Cannot parse destPort of incoming message %s\n", data)
+		(*myAgents[c.ProcessID(destID)]).Deliver(dataSlice[3], c.PortNum(destPort))
+	}
 }
 
 // Helper: generates a slice containing all boxes in this configuration
 func getAllBoxes() []c.BoxID {
 	if gridConfig == nil {
-		c.FatalOvidErrorf("grid cofiguration not initialized\n")
+		c.FatalOvidErrorf("Grid cofiguration not initialized\n")
 	}
 	boxSet := make(map[c.BoxID]int)
 	for _, agentInfo := range gridConfig {
@@ -176,18 +196,18 @@ func InitAndRunServer(boxID c.BoxID, config map[c.ProcessID]*a.AgentInfo, mstrPo
 	shouldRun = true
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master
-	linkMgr = newLinkManager(getAllBoxes(), serverInChan, masterInChan)
+	linkMgr = newLinkManager(
+		getAllBoxes(),
+		serverInChan,
+		masterInChan)
 	msgLog = newMessageLog()
 	debugPrintf("Launching server...\n")
 	linkMgr.run()
 	time.Sleep(1 * time.Second)
 	debugPrintf(serverInfo())
 
-	// Initialize and run my agents
+	// Initialize my agents
 	myAgents = initAgents()
-	for _, agent := range myAgents {
-		(*agent).Run()
-	}
 
 	// main loop
 	go func() {
@@ -204,8 +224,16 @@ func InitAndRunServer(boxID c.BoxID, config map[c.ProcessID]*a.AgentInfo, mstrPo
 			handleMasterMsg(<-masterInChan)
 		}
 	}()
-	for shouldRun {
-		handleServerMsg(<-serverInChan)
+	go func() {
+		for shouldRun {
+			// We use two distinct channels to prevent a deadlock situation when
+			// pushing to my own channel
+			handleServerMsg(<-serverInChan)
+		}
+	}()
+	// run my agents
+	for _, agent := range myAgents {
+		(*agent).Run()
 	}
 	debugPrintf("Terminating\n")
 }

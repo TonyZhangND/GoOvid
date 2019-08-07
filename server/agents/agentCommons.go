@@ -23,8 +23,8 @@ type Agent interface {
 		fatalAgentErrorf func(errMsg string, a ...interface{}))
 	// Run starts the agent's main loop, if any
 	Run()
-	// Deliver delivers msg to the agent
-	Deliver(data string)
+	// Deliver delivers msg to the agent at the specified port
+	Deliver(data string, port c.PortNum)
 	// Stops the agent from processing new messages
 	Halt()
 }

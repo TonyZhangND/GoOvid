@@ -108,12 +108,9 @@ func (l *link) handleConnection() {
 			case "ping":
 				l.doRcvPing(payload)
 			case "msg":
-				sSlice := strings.SplitN(strings.TrimSpace(payload), " ", 2)
-				// sender := sSlice[0]
-				msg := sSlice[1]
-				l.serverOutChan <- msg
+				l.serverOutChan <- payload
 			default:
-				debugPrintf("Invalid msg %v from master\n", header)
+				debugPrintf("Invalid msg %v\n", header)
 			}
 		case <-time.After(pingInterval * 2):
 			l.close()
