@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	a "github.com/TonyZhangND/GoOvid/agents"
 	c "github.com/TonyZhangND/GoOvid/commons"
-	a "github.com/TonyZhangND/GoOvid/server/agents"
 )
 
 var (

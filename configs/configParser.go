@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"strconv"
 
+	a "github.com/TonyZhangND/GoOvid/agents"
 	c "github.com/TonyZhangND/GoOvid/commons"
-	a "github.com/TonyZhangND/GoOvid/server/agents"
 )
 
 // Prints the error messange and kills the program
