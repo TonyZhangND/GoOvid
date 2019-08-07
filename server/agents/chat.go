@@ -9,6 +9,7 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
+// ChatAgent struct
 type ChatAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})

@@ -11,6 +11,8 @@ const debugMode = true
 type AgentType int
 
 const (
+	// Dummy agent enum
+	Dummy AgentType = iota
 	// Chat agent enum
 	Chat AgentType = iota
 )
