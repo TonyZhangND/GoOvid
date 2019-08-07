@@ -23,12 +23,6 @@ type Route struct {
 	DestPort PortNum
 }
 
-// // BoxAddr is a struct defining the box that contains agents
-// type BoxAddr struct {
-// 	Host net.IP
-// 	Port PortNum
-// }
-
 // ParseBoxAddr parses string s into a canonical box address
 func ParseBoxAddr(s string) BoxID {
 	ipStr, portStr, err := net.SplitHostPort(s)
@@ -41,16 +35,6 @@ func ParseBoxAddr(s string) BoxID {
 	CheckFatalOvidErrorf(err, "Cannot parse port %s of box %s\n", portStr, s)
 	return BoxID(fmt.Sprintf("%s:%d", ip.String(), port))
 }
-
-// // Equal reports whether b and x are the same box
-// func (b *BoxAddr) Equal(x *BoxAddr) bool {
-// 	return b.Host.Equal(x.Host) && b.Port == x.Port
-// }
-
-// // Returns the canonical string representing the box
-// func (b *BoxAddr) String() string {
-// 	return fmt.Sprintf("%s:%v", b.Host.String(), b.Port)
-// }
 
 // FatalOvidErrorf prints the error messange and kills the entire program
 func FatalOvidErrorf(s string, a ...interface{}) {

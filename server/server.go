@@ -89,6 +89,10 @@ func handleMasterMsg(data string) {
 		doBroadcast(payload)
 	case "crash":
 		// self-destruct
+		for _, agent := range myAgents {
+			(*agent).Halt()
+		}
+		shouldRun = false
 		os.Exit(0)
 	default:
 		debugPrintf("Invalid command %v from master\n", command)

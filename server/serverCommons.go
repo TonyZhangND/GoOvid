@@ -19,7 +19,7 @@ const basePort c.PortNum = 3000
 func debugPrintf(s string, a ...interface{}) {
 	if debugMode {
 		errMsg := fmt.Sprintf(s, a...)
-		fmt.Printf("Process %v : %s", myBoxID, errMsg)
+		fmt.Printf("Box %v : %s", myBoxID, errMsg)
 	}
 }
 

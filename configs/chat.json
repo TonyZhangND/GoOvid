@@ -3,22 +3,36 @@
         "type" : "chat",
         "box" : "127.0.0.1:5000", 
         "attrs" : {
-            "myname" : "client1",
-            "contacts" : [20]
+            "myname" : "alice",
+            "contacts" : [20, 30]
         },
         "routes": {
-            "20" : { "20" : 100 }
+            "20" : { "20" : 100 },
+            "30" : { "30" : 100 }
         }
     }, 
     "20" : {
         "type" : "chat", 
         "box" : "127.0.0.1:5001",
         "attrs" : {
-            "myname" : "client2",
-            "contacts" : [10]
+            "myname" : "bob",
+            "contacts" : [10, 30]
         },
         "routes": {
-            "10" : { "10" : 100 }
+            "10" : { "10" : 100 },
+            "30" : { "30" : 100 }
+        }
+    },
+    "30" : {
+        "type" : "chat", 
+        "box" : "127.0.0.1:5002",
+        "attrs" : {
+            "myname" : "charles",
+            "contacts" : [10, 30]
+        },
+        "routes": {
+            "10" : { "10" : 100 },
+            "20" : { "20" : 100 }
         }
     }
 }

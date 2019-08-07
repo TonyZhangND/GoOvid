@@ -1,5 +1,8 @@
 package agents
 
+// This file contains the definitions common to any agent.
+// In particular, it contains the Agent interface that all agents must implement.
+
 import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
@@ -20,18 +23,26 @@ const (
 // Agent is an interface that all agents must implement
 type Agent interface {
 	// Init populates an empty struct for the agent
+	// - attrs is a map containing the attributes of the agent
+	// - send is a function that the agent calls to send msg to virtual receiver vDest
+	// - fatalAgentErrorf is a function that halts the agent's operation and prints
+	//   the error stack.
 	Init(attrs map[string]interface{},
-		send func(dest c.ProcessID, msg string),
+		send func(vDest c.ProcessID, msg string),
 		fatalAgentErrorf func(errMsg string, a ...interface{}))
+
 	// Run starts the agent's main loop, if any
 	Run()
+
 	// Deliver delivers msg to the agent at the specified port
 	Deliver(data string, port c.PortNum)
+
 	// Stops the agent from processing new messages
 	Halt()
 }
 
-// AgentInfo is a struct containing data common to all agents
+// AgentInfo is a struct containing data common to all agents.
+// It corresponds to the format of a JSON entry for an agent configuration.
 type AgentInfo struct {
 	Type     AgentType
 	Box      c.BoxID

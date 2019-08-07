@@ -87,6 +87,7 @@ func (l *link) handleConnection() {
 	connReader := bufio.NewReader(l.conn)
 	inChan := make(chan string)
 	go func() {
+		// read incoming tcp stream and push messages into inChan
 		for l.isActive {
 			data, err := connReader.ReadString('\n')
 			if err != nil {
@@ -99,6 +100,7 @@ func (l *link) handleConnection() {
 		}
 	}()
 	for l.isActive {
+		// read from inChan, or timeout if no heartbeat received
 		select {
 		case data := <-inChan:
 			dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
@@ -106,10 +108,13 @@ func (l *link) handleConnection() {
 			payload := strings.TrimSpace(dataSlice[1])
 			switch header {
 			case "ping":
+				// payload is the box, e.g "127.0.0.1:5000"
 				l.doRcvPing(payload)
 			case "chatroom":
+				// data is of format "chatroom <sender box> <msg>"
 				l.serverOutChan <- strings.TrimSpace(data)
 			case "msg":
+				// data is of format "<senderID> <destID> <destPort> <msg>"
 				l.serverOutChan <- payload
 			default:
 				debugPrintf("Invalid msg %v\n", header)

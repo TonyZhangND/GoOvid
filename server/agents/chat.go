@@ -1,5 +1,10 @@
 package agents
 
+// This file contains the definition and logic of a chat agent.
+// A chat agent is a simple tty agent that sends any user inputs to its contacts,
+// and prints any messages it receive.
+// The ChatAgent type must implement the Agent interface.
+
 import (
 	"bufio"
 	"fmt"
@@ -9,7 +14,7 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
-// ChatAgent struct
+// ChatAgent struct contains the information inherent to a chat agent
 type ChatAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})
@@ -18,7 +23,7 @@ type ChatAgent struct {
 	isActive         bool
 }
 
-// Init fills the empty struct with this agent's fields and attributes.
+// Init fills the empty ca struct with this agent's fields and attributes.
 func (ca *ChatAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
 	fatalAgentErrorf func(errMsg string, a ...interface{})) {
