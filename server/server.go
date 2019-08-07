@@ -155,7 +155,6 @@ func initAgents() map[c.ProcessID]*a.Agent {
 			myAg[k] = &ag
 		}
 	}
-
 	// Initialize and run each agent on this box
 	for agentID, agent := range myAg {
 		// Create custom send() func using closure
@@ -164,7 +163,6 @@ func initAgents() map[c.ProcessID]*a.Agent {
 			destPort := gridConfig[agentID].Routes[vDest].DestPort
 			send(agentID, phyDest, destPort, msg)
 		}
-
 		// Create custom error() func using closure
 		fatalAgentErrorf := func(s string, a ...interface{}) {
 			errMsg := fmt.Sprintf(s, a...)
@@ -179,7 +177,10 @@ func initAgents() map[c.ProcessID]*a.Agent {
 }
 
 // InitAndRunServer is the main method of a server
-func InitAndRunServer(boxID c.BoxID, config map[c.ProcessID]*a.AgentInfo, mstrPort c.PortNum) {
+func InitAndRunServer(
+	boxID c.BoxID,
+	config map[c.ProcessID]*a.AgentInfo,
+	mstrPort c.PortNum) {
 	// Check for illegal values
 	if mstrPort < 1024 {
 		fmt.Printf("Port number %d is a well-known port and cannot be used "+
