@@ -97,18 +97,20 @@ func handleMasterMsg(data string) {
 
 // Handles messages from a server
 func handleServerMsg(data string) {
-	// if for chatroom project
-	if len(strings.Split(data, " ")) == 0 {
-		msgLog.appendMsg(data)
+	if strings.SplitN(data, " ", 2)[0] == "chatroom" {
+		// if for chatroom project
+		dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 3)
+		// senderBox := dataSlice[1]
+		msgLog.appendMsg(dataSlice[2])
 	} else {
 		// else a GoOvid message to deliver to an agent
 		dataSlice := strings.SplitN(data, " ", 4)
 		_, err := strconv.ParseInt(dataSlice[0], 10, 16) //ignore sender for now
-		checkFatalServerErrorf(err, "Cannot parse sender of incoming message %s\n", data)
+		checkFatalServerErrorf(err, "Cannot parse sender of incoming message '%s'\n", data)
 		destID, err := strconv.ParseInt(dataSlice[1], 10, 16)
-		checkFatalServerErrorf(err, "Cannot parse destID of incoming message %s\n", data)
+		checkFatalServerErrorf(err, "Cannot parse destID of incoming message '%s'\n", data)
 		destPort, err := strconv.ParseInt(dataSlice[2], 10, 16)
-		checkFatalServerErrorf(err, "Cannot parse destPort of incoming message %s\n", data)
+		checkFatalServerErrorf(err, "Cannot parse destPort of incoming message '%s'\n", data)
 		(*myAgents[c.ProcessID(destID)]).Deliver(dataSlice[3], c.PortNum(destPort))
 	}
 }
@@ -145,6 +147,8 @@ func initAgents() map[c.ProcessID]*a.Agent {
 			switch agentInfo.Type {
 			case a.Chat:
 				ag = &a.ChatAgent{}
+			case a.Dummy:
+				ag = &a.DummyAgent{}
 			default:
 				c.FatalOvidErrorf("Invalid agent type for agent %v:%v\n", k, *agentInfo)
 			}
@@ -226,14 +230,16 @@ func InitAndRunServer(boxID c.BoxID, config map[c.ProcessID]*a.AgentInfo, mstrPo
 	}()
 	go func() {
 		for shouldRun {
-			// We use two distinct channels to prevent a deadlock situation when
-			// pushing to my own channel
 			handleServerMsg(<-serverInChan)
 		}
 	}()
 	// run my agents
 	for _, agent := range myAgents {
 		(*agent).Run()
+	}
+	for shouldRun {
+		// This is here so that the program does not exit when the agents
+		// don't have an infinite loop in Run()
 	}
 	debugPrintf("Terminating\n")
 }

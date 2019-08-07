@@ -136,8 +136,8 @@ func (lm *linkManager) getAllKnown() []c.BoxID {
 // Sends msg on all channels.
 // Applies Ovid message format and headers
 func (lm *linkManager) broadcast(msg string) {
-	lm.serverOutChan <- msg // first send to myself
-	s := fmt.Sprintf("msg %v %s\n", myBoxID, msg)
+	s := fmt.Sprintf("chatroom %v %s\n", myBoxID, msg)
+	lm.serverOutChan <- s // first send to myself
 	lm.RLock()
 	for _, link := range lm.manager {
 		if link != nil {
@@ -236,8 +236,5 @@ func (lm *linkManager) connectAndHandleMaster() {
 func (lm *linkManager) run() {
 	go lm.dialForConnections()
 	go lm.listenForConnections()
-	// lm.connectAndHandleMaster()
-	// Rather than running connectAndHandleMaster() as an async goroutine,
-	// we defer the goroutine to within connectAndHandleMaster(). This forces
-	// the main server loop to progress only after the master has connected.
+	go lm.connectAndHandleMaster()
 }

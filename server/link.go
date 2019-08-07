@@ -102,11 +102,13 @@ func (l *link) handleConnection() {
 		select {
 		case data := <-inChan:
 			dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
-			header := dataSlice[0]
-			payload := dataSlice[1]
+			header := strings.TrimSpace(dataSlice[0])
+			payload := strings.TrimSpace(dataSlice[1])
 			switch header {
 			case "ping":
 				l.doRcvPing(payload)
+			case "chatroom":
+				l.serverOutChan <- strings.TrimSpace(data)
 			case "msg":
 				l.serverOutChan <- payload
 			default:

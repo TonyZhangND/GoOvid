@@ -26,6 +26,8 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 			switch v.(string) {
 			case "chat":
 				agent.Type = a.Chat
+			case "dummy":
+				agent.Type = a.Dummy
 			default:
 				c.FatalOvidErrorf("Unknown agent type %v\n", v)
 			}
