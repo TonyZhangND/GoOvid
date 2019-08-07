@@ -4,7 +4,7 @@
         "box" : "127.0.0.1:5000", 
         "attrs" : {
             "myname" : "client1",
-            "contacts" : ["20"]
+            "contacts" : [20]
         },
         "routes": {
             "20" : { "20" : 100 }
@@ -15,7 +15,7 @@
         "box" : "127.0.0.1:5001",
         "attrs" : {
             "myname" : "client2",
-            "contacts" : ["10"]
+            "contacts" : [10]
         },
         "routes": {
             "10" : { "10" : 100 }

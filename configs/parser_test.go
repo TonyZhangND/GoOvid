@@ -29,7 +29,7 @@ func TestParser_Chat(t *testing.T) {
 			if len(v.([]interface{})) != 1 {
 				t.Errorf("agent 10 has contact %v; want %s", v, "[20]")
 			}
-			if v.([]interface{})[0].(string) != "20" {
+			if int(v.([]interface{})[0].(float64)) != 20 {
 				t.Errorf("agent 10 has contact %v; want %s", v, "[20]")
 			}
 		default:
@@ -59,7 +59,7 @@ func TestParser_Chat(t *testing.T) {
 			if len(v.([]interface{})) != 1 {
 				t.Errorf("agent 20 has contact %v; want %s", v, "[10]")
 			}
-			if v.([]interface{})[0].(string) != "10" {
+			if int(v.([]interface{})[0].(float64)) != 10 {
 				t.Errorf("agent 20 has contact %v; want %s", v, "[10]")
 			}
 		default:
