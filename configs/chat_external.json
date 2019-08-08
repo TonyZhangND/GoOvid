@@ -4,7 +4,7 @@
         "box" : "[2601:646:2:df40:2d2b:ca49:a898:9036]:5000", 
         "attrs" : {
             "myname" : "alice",
-            "contacts" : [20, 30]
+            "contacts" : [20]
         },
         "routes": {
             "20" : { "20" : 100 }
@@ -15,7 +15,7 @@
         "box" : "[2601:646:2:df40:5924:f15a:a637:19ff]:5001",
         "attrs" : {
             "myname" : "bob",
-            "contacts" : [10, 30]
+            "contacts" : [10]
         },
         "routes": {
             "10" : { "10" : 100 }
