@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime/debug"
 	"strconv"
+	"strings"
 )
 
 type (
@@ -33,6 +34,11 @@ func ParseBoxAddr(s string) BoxID {
 	}
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	CheckFatalOvidErrorf(err, "Cannot parse port %s of box %s\n", portStr, s)
+	if strings.Contains(ip.String(), ":") {
+		// IPv6
+		return BoxID(fmt.Sprintf("[%s]:%d", ip.String(), port))
+	}
+	// IPv4
 	return BoxID(fmt.Sprintf("%s:%d", ip.String(), port))
 }
 
