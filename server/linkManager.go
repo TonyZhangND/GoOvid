@@ -155,11 +155,11 @@ func (lm *linkManager) send(destBox c.BoxID, msg string) {
 	} else {
 		// Sending to other box
 		lm.RLock() // We lock so that the link won't be pulled from beneath out feet
+		defer lm.RUnlock()
 		if lm.isUp(destBox) {
 			s := fmt.Sprintf("msg %s\n", msg)
 			lm.manager[destBox].send(s)
 		}
-		lm.RLock()
 	}
 }
 
@@ -175,7 +175,7 @@ func (lm *linkManager) dialForConnections() {
 	for shouldRun {
 		down := linkMgr.getAllDown()
 		for _, bid := range down {
-			if bid < myBoxID && !linkMgr.isUp(bid) {
+			if bid < myBoxID {
 				// conviniently, the bid is the tcp addr
 				c, err := net.DialTimeout("tcp", string(bid),
 					20*time.Millisecond)
@@ -237,7 +237,7 @@ func (lm *linkManager) run() {
 	go lm.dialForConnections()
 	go lm.listenForConnections()
 	if masterPort > 0 {
-		// // only start master conn if port specified
+		// only start master conn if port specified
 		go lm.connectAndHandleMaster()
 	}
 }
