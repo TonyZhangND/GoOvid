@@ -5,4 +5,4 @@ boxAddr=$2
 masterPort=$3
 
 # Run the server in the background
-./ovid $config $boxAddr $masterPort &
+./ovid -master=$masterPort $config $boxAddr &

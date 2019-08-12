@@ -176,17 +176,19 @@ func initAgents() map[c.ProcessID]*a.Agent {
 func InitAndRunServer(
 	boxID c.BoxID,
 	config map[c.ProcessID]*a.AgentInfo,
-	mstrPort c.PortNum) {
+	mstrPort c.PortNum) { // 0 if master conn not specified
 	// Check for illegal values
-	if mstrPort < 1024 {
-		fmt.Printf("Port number %d is a well-known port and cannot be used "+
-			"as masterPort\n", masterPort)
-		os.Exit(1)
-	}
-	if mstrPort < 10000 {
-		fmt.Printf("Port number %d is reserved for inter-server use\n",
-			masterPort)
-		os.Exit(1)
+	if mstrPort != 0 {
+		if mstrPort < 1024 {
+			fmt.Printf("Port number %d is a well-known port and cannot be used "+
+				"for master connection\n", mstrPort)
+			os.Exit(1)
+		}
+		if mstrPort < 10000 {
+			fmt.Printf("Port number %d is reserved for inter-server use\n",
+				masterPort)
+			os.Exit(1)
+		}
 	}
 
 	// Populate the global variables and start the linkManager
@@ -211,20 +213,23 @@ func InitAndRunServer(
 	myAgents = initAgents()
 
 	// main loop
-	go func() {
-		// There is an important reason why this is a separate goroutine,
-		// rather than within a select block together with serverInChan.
-		// Because a broadcast includes pushing into serverInChan,
-		// handleMasterMessage may block, resulting in a deadlock. In fact,
-		// while a buffered channel can defer such a deadlock, the deadlock
-		// will inevitably remain a reachable execution. The solution is
-		// what I have here -- decouple the synchrony between the two channels.
-		// Naively, one could do `go handleMasterMsg(<-masterInChan)`,
-		// but that breaks FIFO ordering
-		for shouldRun {
-			handleMasterMsg(<-masterInChan)
-		}
-	}()
+	if masterPort > 0 {
+		// only listen to master if master port specified
+		go func() {
+			// There is an important reason why this is a separate goroutine,
+			// rather than within a select block together with serverInChan.
+			// Because a broadcast includes pushing into serverInChan,
+			// handleMasterMessage may block, resulting in a deadlock. In fact,
+			// while a buffered channel can defer such a deadlock, the deadlock
+			// will inevitably remain a reachable execution. The solution is
+			// what I have here -- decouple the synchrony between the two channels.
+			// Naively, one could do `go handleMasterMsg(<-masterInChan)`,
+			// but that breaks FIFO ordering
+			for shouldRun {
+				handleMasterMsg(<-masterInChan)
+			}
+		}()
+	}
 	// run my agents
 	for _, agent := range myAgents {
 		go (*agent).Run()

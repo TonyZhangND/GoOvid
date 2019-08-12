@@ -1,9 +1,7 @@
 package main
 
 import (
-	"os"
-	"strconv"
-	"strings"
+	"flag"
 
 	comm "github.com/TonyZhangND/GoOvid/commons"
 	conf "github.com/TonyZhangND/GoOvid/configs"
@@ -12,10 +10,20 @@ import (
 
 func main() {
 	// process command line arguments and parse config
-	config := strings.Trim(os.Args[1], " ")
-	myBox := comm.ParseBoxAddr(strings.Trim(os.Args[2], " "))
-	masterPort, err := strconv.ParseUint(os.Args[3], 10, 16)
-	comm.CheckFatalOvidErrorf(err, "Cannot parse masterPort %v (%v)\n", os.Args[3], err)
+	masterPort := flag.Int("master", 0, "Local port number for master connection")
+	flag.Parse()
+	config := flag.Args()[0]
+	myBox := comm.ParseBoxAddr(flag.Args()[1])
+
+	mp := comm.PortNum(*masterPort)
 	agentMap := *conf.Parse(config)
-	serv.InitAndRunServer(myBox, agentMap, comm.PortNum(masterPort))
+
+	// start only if box is valid
+	for _, agent := range agentMap {
+		if agent.Box == myBox {
+			serv.InitAndRunServer(myBox, agentMap, mp)
+			return
+		}
+	}
+	comm.FatalOvidErrorf("Box %v not in configuration %s\n", myBox, config)
 }

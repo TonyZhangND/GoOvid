@@ -236,5 +236,8 @@ func (lm *linkManager) connectAndHandleMaster() {
 func (lm *linkManager) run() {
 	go lm.dialForConnections()
 	go lm.listenForConnections()
-	go lm.connectAndHandleMaster()
+	if masterPort > 0 {
+		// // only start master conn if port specified
+		go lm.connectAndHandleMaster()
+	}
 }
