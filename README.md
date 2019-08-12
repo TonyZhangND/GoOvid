@@ -73,12 +73,12 @@ boxes, the attributes of each agent, and the routing table of each agent.
 Configuration files are written in the JSON language, which can then be read by GoOvid.
 See GoOvid/configs/chat.json for an example. In the file, each agent is indexed by a unique
 global identifier, of which the agent is not necessarily aware unless made explicit as an
-atribute. Each box is defined by its external IP interface, i.e. an `"[IP]:[port]"` string.
+atribute.
 
 Each JSON agent object has the following characteristics:
 
 * `type` -- A string describing the type of the agent, to be decoded by the parser
-* `box` -- The box on which the agent resides
+* `box` -- The box on which the agent resides. It is defined by it's external IP interface, i.e. an `"[IP]:[port]"` string, such as `127:0.0.1:10000` for an IPv4 address, and `[2601:646:2:df40:5924:f15a:a637:19ff]:5001` for IPv6. One need not worry about ambiguous representations of IP addresses. GoOvid will reduce the strings to their canonical address values for any comparison, such that the strings `127:0.0.1:10000` and `127:0.00.001:10000` refer to the same box, for instance. 
 * `attrs` -- User-defined attributes for the particular agent. This can be an arbitrary JSON structure.
 * `routes` -- The routing table of the agent. Each entry is defined by `<virtual dest> : { <physical dest> : <dest port> }`. 
   -  Since each agent is not necessarily aware of its physical ID or that of others, it sends messages to fixed virtual destinations. Each virtual destination points to the physical ID of the destination agent, and the port on which the server should deliver the message.
