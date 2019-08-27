@@ -12,13 +12,14 @@ the ground up. Ovid was implemented in C, using libuv as the messaging substrate
 For the present work, I'm writing everything Go, to practice architecting my own system.
 
 This directory has the following folders:
-     agents:   Package containing the agents of GoOvid. 
-	chatroom: A toy system used as a warm up exercise. It is a redesign of an undergrad project that I
-               originally did in Python.
-	commons:  Package containing common GoOvid definitions.
-	configs:  Contains the GoOvid configuration files (.json), and Go package with the utilities to
-               parse those files.
-	server:   Package containing the main server layer of GoOvid.
+
+     agents:	Package containing the agents of GoOvid. 
+	chatroom:	A toy system used as a warm up exercise. It is a redesign of an undergrad project that I 
+				originally did in Python.
+	commons:	Package containing common GoOvid definitions.
+	configs:	Contains the GoOvid configuration files (.json), and Go package with the utilities to
+				parse those files.
+	server:		Package containing the main server layer of GoOvid.
 
 ## Why this
 
