@@ -15,10 +15,10 @@ This directory has the following folders:
 
      agents:	Package containing the agents of GoOvid. 
 	chatroom:	A toy system used as a warm up exercise. It is a redesign of an undergrad project that I 
-				originally did in Python.
+			originally did in Python.
 	commons:	Package containing common GoOvid definitions.
 	configs:	Contains the GoOvid configuration files (.json), and Go package with the utilities to
-				parse those files.
+			parse those files.
 	server:		Package containing the main server layer of GoOvid.
 
 ## Why this
