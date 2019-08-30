@@ -13,7 +13,7 @@ For the present work, I'm writing everything Go, to practice architecting my own
 
 This directory has the following folders:
 
-	agents:	Package containing the agents of GoOvid. 
+	agents:		Package containing the agents of GoOvid. 
 	chatroom:	A toy system used as a warm up exercise. It is a redesign of an undergrad project that I 
 			originally did in Python.
 	commons:	Package containing common GoOvid definitions.
