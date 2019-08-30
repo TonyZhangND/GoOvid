@@ -13,7 +13,7 @@ For the present work, I'm writing everything Go, to practice architecting my own
 
 This directory has the following folders:
 
-     agents:	Package containing the agents of GoOvid. 
+	agents:	Package containing the agents of GoOvid. 
 	chatroom:	A toy system used as a warm up exercise. It is a redesign of an undergrad project that I 
 			originally did in Python.
 	commons:	Package containing common GoOvid definitions.
@@ -82,7 +82,30 @@ Each JSON agent object has the following characteristics:
 * `box` -- The box on which the agent resides. It is defined by it's external IP interface, i.e. an `"[IP]:[port]"` string, such as `127:0.0.1:10000` for an IPv4 address, and `[2601:646:2:df40:5924:f15a:a637:19ff]:5001` for IPv6. One need not worry about ambiguous representations of IP addresses. GoOvid will reduce the strings to their canonical address values for any comparison, such that the strings `127:0.0.1:10000` and `127:0.00.001:10000` refer to the same box, for instance. 
 * `attrs` -- User-defined attributes for the particular agent. This can be an arbitrary JSON structure.
 * `routes` -- The routing table of the agent. Each entry is defined by `<virtual dest> : { <physical dest> : <dest port> }`. 
-  -  Since each agent is not necessarily aware of its physical ID or that of others, it sends messages to fixed virtual destinations. Each virtual destination points to the physical ID of the destination agent, and the port on which the server should deliver the message.
+  -  Since each agent is not necessarily aware of its physical ID or that of others, it sends messages to fixed virtual destinations. Each virtual destination points to the physical ID of the destination agent, and the port on which the server should deliver the message. 
+
+### More on virtual and physical agent identifiers
+
+A key design in Ovid is that there are two types of agent identifiers, virtual and physical (implementation wise, they are as of now the of same type `processID`). There are two arguments for this feature.
+
+First, there is no reason why any agent show know, *a priori*, the identities of all other agents in the system -- this information is instead maintained at the level of the ovid framework. Usage wise, this allows for 'plug-and-play' agents. For instance, an agent could be programmed to send outgoing messages to virtual destination `2`. The physical agent that this virtual address `2` points to can be changed by just changing the routing table in the configuration, without any modifications to agent code.
+
+Second, this allows for the system to *evolve dynamically* by only changing the GoOvid configuration, with the agent implemented as if the system is static. As an example, consider a client-server system, where there is one client agent of physical id `1` and one server agent of of physical id `2`. Suppose that the client uses the virtual id `200` for sending messages to a server, and the server uses `10` as its client receiving port. Thus the client agent routing table will contain the entry 
+
+```
+200: { 2, 10 }
+```
+
+This line means that when the client agent tries to send to virtual dest `200`, GoOvid delivers it to port `10` of agent `2`, which is the server agent. 
+
+Now, we want to make the system fault tolerant by adding another server agent `3` that's a replica of `2`. Then the client agent needs to send every request to both servers. Instead of changing the client agent's code to do so, We can then use the routing table for *multiplexing*, by using two entries in the client's routing table
+
+```
+200: { 2, 10 }
+200: { 3, 10 }
+```
+
+As a result, whenever the client agent tries to send to virtual dest `200`, GoOvid delivers it to both agents `2` and `3`. This feature allows for configurations to change dynamically in a running system.
 
 ### Starting a grid
 
