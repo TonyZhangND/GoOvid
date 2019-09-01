@@ -120,7 +120,7 @@ To build GoOvid, run
 To start a grid, run the command
 
 ```
-./ovid [-debug] [path/to/configfile] [box]
+./ovid [-debug] <path/to/configfile> <box>
 ```
 
 and GoOvid will start all agents residing in the box. Note that all command line flags must 

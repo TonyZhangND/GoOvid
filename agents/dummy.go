@@ -1,5 +1,9 @@
 package agents
 
+// This file contains the definition and logic of a dummy agent.
+// A dummy agent has no functionality, and is used for server testing purposes
+// The DummyAgent type must implement the Agent interface.
+
 import (
 	"fmt"
 	"strings"

@@ -1,8 +1,7 @@
 package agents
 
 // This file contains the definition and logic of a chat agent.
-// A chat agent is a simple tty agent that sends any user inputs to its contacts,
-// and prints any messages it receive.
+// A chat agent sends any user inputs to its contacts, and prints any messages it receive.
 // The ChatAgent type must implement the Agent interface.
 
 import (
@@ -63,6 +62,7 @@ func (ca *ChatAgent) Run() {
 		// Read the keyboad input.
 		input, err := reader.ReadString('\n')
 		if err != nil {
+			ca.Halt()
 			ca.fatalAgentErrorf("Invalid input %v in chatAgent\n", input)
 		}
 		for _, vDest := range ca.contacts {
