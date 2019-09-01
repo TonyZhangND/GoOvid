@@ -123,10 +123,10 @@ To start a grid, run the command
 ./ovid [-debug] [path/to/configfile] [box]
 ```
 
-and ovid will start all agents residing in the box. Note that all command line flags must 
+and GoOvid will start all agents residing in the box. Note that all command line flags must 
 be placed before positional arguments. 
 
-To quickly kill all Ovid processes, run the command
+To quickly kill all GoOvid processes, run the command
 
 ```
 ./killall.sh
