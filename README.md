@@ -48,7 +48,8 @@ key-value store using the Paxos protocol.
 The type of agents currently implemented in this repository includes:
 
 * **Dummy** -- does nothing; used as a placeholder for server testing.
-* **Chat** -- a tty service that broadcasts inputs from stdin, and prints incoming messages from other chat agents
+* **Chat** -- a chat service that broadcasts inputs from stdin, and prints incoming messages from other chat agents
+* **KVS** -- an agent that implements a durable key-value-store
 
 To implement a new type of agent, one follows the below recipe:
 
