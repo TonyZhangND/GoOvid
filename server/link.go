@@ -55,7 +55,7 @@ func (l *link) close() {
 func (l *link) send(s string) {
 	_, err := l.conn.Write([]byte(string(s)))
 	if err != nil {
-		debugPrintf("Send %v to %v failed. Closing connection\n", s, l.other)
+		debugPrintf(nil, "Send %v to %v failed. Closing connection\n", s, l.other)
 		l.close()
 	}
 }
@@ -83,7 +83,7 @@ func (l *link) handleConnection() {
 	defer l.close()
 	l.isActive = true
 	go l.runPinger()
-	debugPrintf("Serving %s\n", l.conn.RemoteAddr().String())
+	debugPrintf(nil, "Serving %s\n", l.conn.RemoteAddr().String())
 	connReader := bufio.NewReader(l.conn)
 	inChan := make(chan string)
 	go func() {
@@ -92,7 +92,7 @@ func (l *link) handleConnection() {
 			data, err := connReader.ReadString('\n')
 			if err != nil {
 				// the connection is dead. Kill this link
-				debugPrintf("Lost connection with %v\n", l.other)
+				debugPrintf(nil, "Lost connection with %v\n", l.other)
 				l.close()
 				return
 			}
@@ -117,7 +117,7 @@ func (l *link) handleConnection() {
 				// data is of format "<senderID> <destID> <destPort> <msg>"
 				l.serverOutChan <- payload
 			default:
-				debugPrintf("Invalid msg %v\n", header)
+				debugPrintf(nil, "Invalid msg %v\n", header)
 			}
 		case <-time.After(pingInterval * 2):
 			l.close()

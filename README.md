@@ -111,6 +111,27 @@ As a result, whenever the client agent tries to send to virtual dest `200`, GoOv
 
 A running system in GoOvid is called a **grid**. GoOvid parses a configuration file and automatically contructs a grid according to that configuration, agents, boxes and all.
 
+To build GoOvid, run 
+
+```
+./build
+```
+
+To start a grid, run the command
+
+```
+./ovid [-debug] [path/to/configfile] [box]
+```
+
+and ovid will start all agents residing in the box. Note that all command line flags must 
+be placed before positional arguments. 
+
+To quickly kill all Ovid processes, run the command
+
+```
+./killall.sh
+```
+
 ## Testing the servers
 
 GoOvid/master.py is a tool that can be used to test the correctness of GoOvid's server

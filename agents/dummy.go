@@ -11,13 +11,15 @@ import (
 type DummyAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})
+	debugPrintf      func(s string, a ...interface{})
 	isActive         bool
 }
 
 // Init fills the empty struct with this agent's fields and attributes.
 func (da *DummyAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
-	fatalAgentErrorf func(errMsg string, a ...interface{})) {
+	fatalAgentErrorf func(errMsg string, a ...interface{}),
+	debugPrintf func(s string, a ...interface{})) {
 	da.send = send
 	da.fatalAgentErrorf = fatalAgentErrorf
 }

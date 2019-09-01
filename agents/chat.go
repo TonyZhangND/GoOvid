@@ -18,6 +18,7 @@ import (
 type ChatAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})
+	debugPrintf      func(s string, a ...interface{})
 	userName         string
 	contacts         []c.ProcessID
 	isActive         bool
@@ -26,9 +27,11 @@ type ChatAgent struct {
 // Init fills the empty ca struct with this agent's fields and attributes.
 func (ca *ChatAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
-	fatalAgentErrorf func(errMsg string, a ...interface{})) {
+	fatalAgentErrorf func(errMsg string, a ...interface{}),
+	debugPrintf func(s string, a ...interface{})) {
 	ca.send = send
 	ca.fatalAgentErrorf = fatalAgentErrorf
+	ca.debugPrintf = debugPrintf
 	ca.userName = attrs["myname"].(string)
 	ca.contacts = make([]c.ProcessID, len(attrs["contacts"].([]interface{})))
 	for i, id := range attrs["contacts"].([]interface{}) {
@@ -45,6 +48,7 @@ func (ca *ChatAgent) Halt() {
 // Deliver a message of the format "<sender name> <contents>".
 // The chat agent ignores the port.
 func (ca *ChatAgent) Deliver(data string, port c.PortNum) {
+	ca.debugPrintf("delivering %v\n", data)
 	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
 	sender, msg := dataSlice[0], dataSlice[1]
 	fmt.Printf("\n%s > %s\n%s > ", sender, msg, ca.userName)

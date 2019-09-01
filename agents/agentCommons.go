@@ -7,8 +7,6 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
-const debugMode = true
-
 // AgentType is an integer denoting the type of an agent
 // It acts like an enum
 type AgentType int
@@ -29,7 +27,8 @@ type Agent interface {
 	//   the error stack.
 	Init(attrs map[string]interface{},
 		send func(vDest c.ProcessID, msg string),
-		fatalAgentErrorf func(errMsg string, a ...interface{}))
+		fatalAgentErrorf func(errMsg string, a ...interface{}),
+		debugPrintf func(s string, a ...interface{}))
 
 	// Run starts the agent's main loop, if any
 	Run()

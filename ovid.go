@@ -11,6 +11,7 @@ import (
 func main() {
 	// process command line arguments and parse config
 	masterPort := flag.Int("master", 0, "Local port number for master connection")
+	debugMode := flag.Bool("debug", false, "Toggles debugMode to on")
 	flag.Parse()
 	config := flag.Args()[0]
 	myBox := comm.ParseBoxAddr(flag.Args()[1])
@@ -21,6 +22,9 @@ func main() {
 	// start only if box is valid
 	for _, agent := range agentMap {
 		if agent.Box == myBox {
+			if *debugMode {
+				serv.DebugMode = true
+			}
 			serv.InitAndRunServer(myBox, agentMap, mp)
 			return
 		}
