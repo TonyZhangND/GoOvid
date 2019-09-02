@@ -95,7 +95,7 @@ func handleMasterMsg(data string) {
 		shouldRun = false
 		os.Exit(0)
 	default:
-		debugPrintf(nil, "Invalid command %v from master\n", command)
+		debugPrintf(-1, "Invalid command %v from master\n", command)
 	}
 }
 
@@ -153,11 +153,12 @@ func initAgents() map[c.ProcessID]*a.Agent {
 	}
 	// Initialize and run each agent on this box
 	for agentID, agent := range myAg {
+		debugPrintf(int(agentID), "Routing table\n%v\n\n", gridConfig[agentID].Routes)
 		// Create custom send func using closure
 		sendMsg := func(vDest c.ProcessID, msg string) {
 			phyDest := gridConfig[agentID].Routes[vDest].DestID
 			destPort := gridConfig[agentID].Routes[vDest].DestPort
-			debugPrintf(nil, "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
+			debugPrintf(int(agentID), "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
 			send(agentID, phyDest, destPort, msg)
 		}
 		// Create custom error func using closure
@@ -169,7 +170,7 @@ func initAgents() map[c.ProcessID]*a.Agent {
 		}
 		// Create custom debugPrintf func using closure
 		agentDebugPrintf := func(s string, a ...interface{}) {
-			debugPrintf(&agentID, s, a...)
+			debugPrintf(int(agentID), s, a...)
 		}
 		// Initialize the agent
 		(*agent).Init(gridConfig[agentID].RawAttrs, sendMsg, fatalAgentErrorf, agentDebugPrintf)
@@ -209,10 +210,10 @@ func InitAndRunServer(
 		serverInChan,
 		masterInChan)
 	msgLog = newMessageLog()
-	debugPrintf(nil, "Launching server...\n")
+	debugPrintf(-1, "Launching server...\n")
 	linkMgr.run()
 	time.Sleep(1 * time.Second)
-	debugPrintf(nil, serverInfo())
+	debugPrintf(-1, serverInfo())
 
 	// Initialize my agents
 	myAgents = initAgents()
@@ -244,5 +245,5 @@ func InitAndRunServer(
 			handleServerMsg(<-serverInChan)
 		}
 	}
-	debugPrintf(nil, "Terminating\n")
+	debugPrintf(-1, "Terminating\n")
 }

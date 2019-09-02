@@ -171,7 +171,7 @@ func (lm *linkManager) sendToMaster(msg string) {
 
 // Dials for new connections to all bid < my bid, using build-in string comp
 func (lm *linkManager) dialForConnections() {
-	debugPrintf(nil, "Dialing for peer connections\n")
+	debugPrintf(-1, "Dialing for peer connections\n")
 	for shouldRun {
 		down := linkMgr.getAllDown()
 		for _, bid := range down {
@@ -191,7 +191,7 @@ func (lm *linkManager) dialForConnections() {
 
 // Listens and establishes new connections
 func (lm *linkManager) listenForConnections() {
-	debugPrintf(nil, "Listening for peer connections\n")
+	debugPrintf(-1, "Listening for peer connections\n")
 	// conviniently, the myBoxID is my tcp addr
 	l, err := net.Listen("tcp", string(myBoxID))
 	if err != nil {
@@ -214,13 +214,13 @@ func (lm *linkManager) listenForConnections() {
 func (lm *linkManager) connectAndHandleMaster() {
 	// listen for master on the master address
 	masterAddr := fmt.Sprintf("%s:%d", masterIP, masterPort)
-	debugPrintf(nil, "Listening for master connecting on %v\n", masterAddr)
+	debugPrintf(-1, "Listening for master connecting on %v\n", masterAddr)
 	mstrListener, err := net.Listen("tcp", masterAddr)
 	checkFatalServerErrorf(err, "Error connecting to master\n")
 	mstrConn, err := mstrListener.Accept()
 	checkFatalServerErrorf(err, "Error connecting to master\n")
 	lm.masterConn = mstrConn
-	debugPrintf(nil, "Accepted master connection\n")
+	debugPrintf(-1, "Accepted master connection\n")
 	// main loop: process commands from master as async goroutine
 	go func() {
 		defer lm.masterConn.Close()
