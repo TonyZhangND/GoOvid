@@ -32,6 +32,8 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 				agent.Type = a.KVS
 			case "client":
 				agent.Type = a.Client
+			case "tty":
+				agent.Type = a.TTY
 			default:
 				c.FatalOvidErrorf("Unknown agent type %v\n", v)
 			}
