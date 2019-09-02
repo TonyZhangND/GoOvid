@@ -4,6 +4,7 @@ GoOvid.code-workspace
 
 ovid
 test_output/
+tmp/
 
 chatroom/test_output
 
