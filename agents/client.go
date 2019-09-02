@@ -29,7 +29,7 @@ func (clt *ClientAgent) Init(attrs map[string]interface{},
 	clt.fatalAgentErrorf = fatalAgentErrorf
 	clt.debugPrintf = debugPrintf
 	clt.isActive = false
-	clt.myID = attrs["myid"].(c.ProcessID)
+	clt.myID = c.ProcessID(attrs["myid"].(float64))
 }
 
 // Halt stops the execution of clt.
@@ -48,6 +48,7 @@ func (clt *ClientAgent) Halt() {
 //   	> replies are of the format "putRes" which represents a sucessful put, or
 //        getRes <val> where <val> is the result of the getRes.
 func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
+	clt.debugPrintf("Client received request %s\n", request)
 	switch port {
 	case 1: //tty command -> forward to kvs
 		msg := fmt.Sprintf("%v %s", clt.myID, request)
@@ -55,10 +56,12 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 	case 2: //kvs response -> forward to tty
 		repSlice := strings.SplitN(request, " ", 2)
 		switch repSlice[0] {
-		case "putres": //successful put
+		case "putok": //successful put
 			clt.send(1, "ok")
-		case "getres":
+		case "getok":
 			clt.send(1, repSlice[1])
+		case "getbad":
+			clt.send(1, "No such entry")
 		default:
 			clt.Halt()
 			clt.fatalAgentErrorf("Unexpected response %s from kvs\n", request)

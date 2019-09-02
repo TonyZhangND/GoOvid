@@ -46,7 +46,7 @@ func (tty *TTYAgent) Halt() {
 // - client agent at virtual dest 1
 // - client responses to enter via port 1
 func (tty *TTYAgent) Deliver(data string, port c.PortNum) {
-	fmt.Printf("\n%s\n> ", data)
+	fmt.Printf("%s\n", data)
 	tty.block = false
 }
 
@@ -64,23 +64,27 @@ func (tty *TTYAgent) Run() {
 		// Read the keyboad input and check for validity
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("Invalid command\n> ")
+			fmt.Printf("Invalid command\n")
+			continue
 		}
-		reqSlice := strings.SplitN(input, " ", 3)
+		reqSlice := strings.SplitN(strings.TrimSpace(input), " ", 3)
 		var req string
 		switch reqSlice[0] {
 		case "put":
 			if len(reqSlice) != 3 {
-				fmt.Printf("Invalid command\n> ")
+				fmt.Printf("Invalid command\n")
+				continue
 			}
 			req = fmt.Sprintf("put %s %s", reqSlice[1], reqSlice[2])
 		case "get":
 			if len(reqSlice) != 2 {
-				fmt.Printf("Invalid command\n> ")
+				fmt.Printf("Invalid command\n")
+				continue
 			}
 			req = fmt.Sprintf("get %s", reqSlice[1])
 		default:
-			fmt.Printf("Invalid command\n> ")
+			fmt.Printf("Invalid command\n")
+			continue
 		}
 		// Command is valid. Send to client and wait for response
 		tty.block = true

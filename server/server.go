@@ -157,6 +157,7 @@ func initAgents() map[c.ProcessID]*a.Agent {
 		sendMsg := func(vDest c.ProcessID, msg string) {
 			phyDest := gridConfig[agentID].Routes[vDest].DestID
 			destPort := gridConfig[agentID].Routes[vDest].DestPort
+			debugPrintf(nil, "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
 			send(agentID, phyDest, destPort, msg)
 		}
 		// Create custom error func using closure

@@ -58,6 +58,7 @@ func (kvs *KVSAgent) Halt() {
 // "<sender physical id> put <key> <data>"
 // The kvs agent expects all client requests to enter via port 1.
 func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
+	kvs.debugPrintf("KVS received request %s\n", request)
 	if port != 1 {
 		kvs.fatalAgentErrorf("Unexpected request %s in port %v\n", request, port)
 	}
@@ -72,19 +73,20 @@ func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
 	case "put":
 		dataSlice := strings.SplitN(data, " ", 2)
 		key, val := dataSlice[0], dataSlice[1]
-		// Append data to log
+		// Store and ppend data to log
+		kvs.inMemoryStore[key] = val
 		kvs.logger.Printf("%v %s %s\n", sender, key, val)
 		// Reply to client
-		kvs.send(c.ProcessID(sender), "put")
+		kvs.send(c.ProcessID(sender), "putok")
 	case "get":
 		key := strings.TrimSpace(data)
 		val, ok := kvs.inMemoryStore[key]
 		if !ok {
 			// No value for such a key
-			kvs.send(c.ProcessID(sender), "get")
+			kvs.send(c.ProcessID(sender), "getbad")
 		} else {
 			// Key exists
-			reply := fmt.Sprintf("get %s", val)
+			reply := fmt.Sprintf("getok %s", val)
 			kvs.send(c.ProcessID(sender), reply)
 		}
 	default:
