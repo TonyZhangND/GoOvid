@@ -27,6 +27,7 @@ type Agent interface {
 	// - send is a function that the agent calls to send msg to virtual receiver vDest
 	// - fatalAgentErrorf is a function that halts the agent's operation and prints
 	//   the error stack.
+	// - debugPrintf is a function that prints some debugging message if debugMode is on
 	Init(attrs map[string]interface{},
 		send func(vDest c.ProcessID, msg string),
 		fatalAgentErrorf func(errMsg string, a ...interface{}),

@@ -55,7 +55,11 @@ func (kvs *KVSAgent) Halt() {
 
 // Deliver a message of the format "<sender physical id> get <key>" or
 // "<sender physical id> put <key> <data>"
+// The kvs agent expects all client requests to enter via port 1.
 func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
+	if port != 1 {
+		kvs.fatalAgentErrorf("Agent does not expect messages in port %v\n", port)
+	}
 	reqSlice := strings.SplitN(strings.TrimSpace(request), " ", 3)
 	senderStr, requestType, data := reqSlice[0], reqSlice[1], reqSlice[2]
 	sender, err := strconv.Atoi(senderStr)
