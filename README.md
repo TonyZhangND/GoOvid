@@ -50,6 +50,8 @@ The type of agents currently implemented in this repository includes:
 * **Dummy** -- does nothing; used as a placeholder for server testing.
 * **Chat** -- a chat service that broadcasts inputs from stdin, and prints incoming messages from other chat agents
 * **KVS** -- an agent that implements a durable key-value-store
+* **Client** -- a client of the kvs agent
+* **TTY** -- a tty agent used to interact with the client agent
 
 To implement a new type of agent, one follows the below recipe:
 

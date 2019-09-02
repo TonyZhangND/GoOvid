@@ -18,6 +18,8 @@ const (
 	Chat AgentType = iota
 	// KVS agent enum
 	KVS AgentType = iota
+	// Client agent enum
+	Client AgentType = iota
 )
 
 // Agent is an interface that all agents must implement
@@ -61,6 +63,8 @@ func NewAgent(t AgentType) Agent {
 		return &DummyAgent{}
 	case KVS:
 		return &KVSAgent{}
+	case Client:
+		return &ClientAgent{}
 	default:
 		c.FatalOvidErrorf("Invalid agent type for agent %v\n", t)
 		return nil

@@ -4,6 +4,7 @@ package agents
 // A kvs implements a key-value-store with a "put" and "get" API. It ensures data
 // durability by maintaining an append-only log.
 // The KVSAgent type must implement the Agent interface.
+// Requirement: keys do not contain whitespace
 
 import (
 	"fmt"
@@ -58,7 +59,7 @@ func (kvs *KVSAgent) Halt() {
 // The kvs agent expects all client requests to enter via port 1.
 func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
 	if port != 1 {
-		kvs.fatalAgentErrorf("Agent does not expect messages in port %v\n", port)
+		kvs.fatalAgentErrorf("Unexpected request %s in port %v\n", request, port)
 	}
 	reqSlice := strings.SplitN(strings.TrimSpace(request), " ", 3)
 	senderStr, requestType, data := reqSlice[0], reqSlice[1], reqSlice[2]
@@ -94,4 +95,5 @@ func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
 
 // Run begins the execution of the kvs agent.
 func (kvs *KVSAgent) Run() {
+	kvs.isActive = true
 }
