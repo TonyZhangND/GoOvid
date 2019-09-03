@@ -135,6 +135,79 @@ To quickly kill all GoOvid processes, run the command
 ./killall.sh
 ```
 
+## Demo Applications
+
+### Simple Key-value-store
+
+The first demo is a simple, non-replicated key-value-store on GoOvid. This end-to-end service
+is comprised of a tty agent, a client agent, and a kvs agent.
+
+1. tty agent -- a tty interface used to interact with the client. It forwards input to the client, and prints any messages received from the client.
+2. client agent -- the client of a key value store. It sends requests to the kvs, and processes the responses.
+3. kvs agent -- implements the key-value-store with a "put" and "get" API. It ensures data durability by maintaining an append-only log
+
+These agents are arrangend in a chain-like fashion, and as specified in kvs.json config file
+
+```json
+{
+	"100": {
+		"type": "tty",
+		"box": "127.0.0.1:5000",
+		"attrs": { },
+		"routes": {
+			"1" : { "200" :  1 }
+		}
+	},
+	"200": {
+		"type" : "client",
+		"box" : "127.0.0.1:5000",
+		"attrs" : {
+			"myid" : 200
+		},
+		"routes" : {
+			"1" : { "100" : 1 },
+			"2" : { "300" : 1 }
+		}
+	},
+	"300" : {
+		"type" : "kvs",
+		"box" : "127.0.0.1:5001",
+		"attrs" : { 
+            "log" : "tmp/300.log"
+        },
+		"routes" : {
+            "200" : { "200" : 2 }
+        }
+	}
+}
+```
+
+Notice that the kvs agent exists on a separate box as the client for failure isolation.
+
+To start the program, first boot up the kvs, by running on the command line
+
+```
+/ovid configs/kvs.json 127.0.0.1:5001
+```
+
+Next, start the client and the tty agent by running on another terminal 
+
+```
+/ovid configs/kvs.json 127.0.0.1:5000
+```
+
+and a text prompt will show up. 
+
+The user can issue two types of requests to the kvs:
+
+1. Put request
+	- A request of the format `put <key> <value>`, where `<key>` does not contain any whitespace. This stores the key-value pair into the store.
+2. Get request
+	- A request of the format `get <key>`, where `<key>` does not contain any whitespace. This fetches and prints the value mapped to `<key>` from the store. It prints an error message if no such value exist.
+
+
+
+
 ## Testing the servers
 
 GoOvid/master.py is a tool that can be used to test the correctness of GoOvid's server
