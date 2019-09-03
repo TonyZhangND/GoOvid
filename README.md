@@ -1,5 +1,19 @@
 # GoOvid 
 
+
+* [What is this](#what-is-this)
+* [Why this](#why-this)
+* [Usage](#usage)
+	+ [Agents](#agents)
+	+ [Boxes](#boxes)
+	+ [Configuration files](#configuration-files)
+	+ [More on virtual and physical agent identifiers](#more-on-virtual-and-physical-agent-identifiers)
+	+ [Starting a grid](#starting-a-grid)
+* [Demo Applications](#demo-applications)
++ [Simple Key-value-store](#simple-key-value-store)
+* [Testing the servers](#testing-the-servers)
+* [Requirements](#requirements)
+
 ## What is this
 
 GoOvid is the my own Go implementation of the 
