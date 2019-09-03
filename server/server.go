@@ -20,9 +20,9 @@ import (
 var (
 	masterIP   string
 	masterPort c.PortNum
-	gridConfig map[c.ProcessID]a.AgentInfo
+	gridConfig map[c.ProcessID]*a.AgentInfo
 	myBoxID    c.BoxID
-	myAgents   map[c.ProcessID]a.Agent
+	myAgents   map[c.ProcessID]*a.Agent
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
 	msgLog     *messageLog
@@ -46,7 +46,7 @@ func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
 	destBox := destAgent.Box
 	if destBox == myBoxID {
 		// if sending to agent on this box
-		(myAgents[phyDest]).Deliver(msg, destPort)
+		(*myAgents[phyDest]).Deliver(msg, destPort)
 	} else {
 		// else sending to agent on some other box
 		s := fmt.Sprintf("%d %d %d %s", senderID, phyDest, destPort, msg)
@@ -94,7 +94,7 @@ func handleMasterMsg(data string) {
 	case "crash":
 		// self-destruct
 		for _, agent := range myAgents {
-			agent.Halt()
+			(*agent).Halt()
 		}
 		shouldRun = false
 		os.Exit(0)
@@ -119,7 +119,7 @@ func handleServerMsg(data string) {
 		checkFatalServerErrorf(err, "Cannot parse destID of incoming message '%s'\n", data)
 		destPort, err := strconv.ParseInt(dataSlice[2], 10, 16)
 		checkFatalServerErrorf(err, "Cannot parse destPort of incoming message '%s'\n", data)
-		myAgents[c.ProcessID(destID)].Deliver(dataSlice[3], c.PortNum(destPort))
+		(*myAgents[c.ProcessID(destID)]).Deliver(dataSlice[3], c.PortNum(destPort))
 	}
 }
 
@@ -142,17 +142,17 @@ func getAllBoxes() []c.BoxID {
 }
 
 // Helper: initializes all agents on this box
-func initAgents() map[c.ProcessID]a.Agent {
+func initAgents() map[c.ProcessID]*a.Agent {
 	if gridConfig == nil {
 		c.FatalOvidErrorf("grid cofiguration not initialized\n")
 	}
 	// Make map containing all agent structs on this box
-	myAg := make(map[c.ProcessID]a.Agent)
+	myAg := make(map[c.ProcessID]*a.Agent)
 	for k, agentInfo := range gridConfig {
 		if agentInfo.Box == myBoxID {
 			// allocate the struct
 			ag := a.NewAgent(agentInfo.Type)
-			myAg[k] = ag
+			myAg[k] = &ag
 		}
 	}
 	// Initialize and run each agent on this box
@@ -179,7 +179,7 @@ func initAgents() map[c.ProcessID]a.Agent {
 				errMsg := fmt.Sprintf(s, a...)
 				fmt.Printf("Error : Agent %v : %s", id, errMsg)
 				debug.PrintStack()
-				agent.Halt()
+				(*agent).Halt()
 			}
 		}
 		// Create custom debugPrintf func using closure
@@ -189,7 +189,7 @@ func initAgents() map[c.ProcessID]a.Agent {
 			}
 		}
 		// Initialize the agent
-		agent.Init(gridConfig[agentID].RawAttrs,
+		(*agent).Init(gridConfig[agentID].RawAttrs,
 			sendFuncGen(agentID),
 			fatalAgentErrorfGen(agentID),
 			agentDebugPrintfGen(agentID))
@@ -200,7 +200,7 @@ func initAgents() map[c.ProcessID]a.Agent {
 // InitAndRunServer is the main method of a server
 func InitAndRunServer(
 	boxID c.BoxID,
-	config map[c.ProcessID]a.AgentInfo,
+	config map[c.ProcessID]*a.AgentInfo,
 	mstrPort c.PortNum) { // 0 if master conn not specified
 	// Check for illegal values
 	if mstrPort != 0 {
@@ -257,7 +257,7 @@ func InitAndRunServer(
 	}
 	// run my agents
 	for _, agent := range myAgents {
-		go agent.Run()
+		go (*agent).Run()
 	}
 	for shouldRun {
 		handleServerMsg(<-serverInChan)

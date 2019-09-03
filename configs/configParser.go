@@ -17,8 +17,8 @@ func checkDecodeError(err error, dat string) {
 
 // Helper: Parses the json object of an agent, returning a pointer to the
 // resulting AgentInfo struct
-func parseAgentObject(agentObj map[string]interface{}) a.AgentInfo {
-	agent := a.AgentInfo{} // alloc empty struct for the agent
+func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
+	agent := &a.AgentInfo{} // alloc empty struct for the agent
 	for k, v := range agentObj {
 		switch k {
 		case "type":
@@ -74,7 +74,7 @@ func parseAgentObject(agentObj map[string]interface{}) a.AgentInfo {
 
 // Parse reads the ovid configuration in configFile, and returns a pointer
 // to a map containing the AgentInfo objects in the configuration
-func Parse(configFile string) map[c.ProcessID]a.AgentInfo {
+func Parse(configFile string) map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)
 	if err != nil {
@@ -88,7 +88,7 @@ func Parse(configFile string) map[c.ProcessID]a.AgentInfo {
 
 	// Decode map[string]interface{} into a new AgentInfo struct, and return a
 	// map containing all the agents
-	res := make(map[c.ProcessID]a.AgentInfo)
+	res := make(map[c.ProcessID]*a.AgentInfo)
 	m := rawMap.(map[string]interface{})
 	for id, obj := range m {
 		pid, err := strconv.ParseUint(id, 10, 16)
