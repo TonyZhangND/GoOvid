@@ -10,7 +10,7 @@
 	+ [More on virtual and physical agent identifiers](#more-on-virtual-and-physical-agent-identifiers)
 	+ [Starting a grid](#starting-a-grid)
 * [Demo Applications](#demo-applications)
-+ [Simple Key-value-store](#simple-key-value-store)
+	+ [Simple Key-value-store](#simple-key-value-store)
 * [Testing the servers](#testing-the-servers)
 * [Requirements](#requirements)
 
