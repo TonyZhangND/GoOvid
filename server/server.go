@@ -158,13 +158,13 @@ func initAgents() map[c.ProcessID]*a.Agent {
 		sendMsg := func(vDest c.ProcessID, msg string) {
 			phyDest := gridConfig[agentID].Routes[vDest].DestID
 			destPort := gridConfig[agentID].Routes[vDest].DestPort
-			debugPrintf(int(agentID), "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
+			debugPrintf(-1, "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
 			send(agentID, phyDest, destPort, msg)
 		}
 		// Create custom error func using closure
 		fatalAgentErrorf := func(s string, a ...interface{}) {
 			errMsg := fmt.Sprintf(s, a...)
-			fmt.Printf("Error : Ovid : %s", errMsg)
+			fmt.Printf("Error : Agent %v : %s", agentID, errMsg)
 			debug.PrintStack()
 			(*agent).Halt()
 		}
@@ -181,7 +181,7 @@ func initAgents() map[c.ProcessID]*a.Agent {
 // InitAndRunServer is the main method of a server
 func InitAndRunServer(
 	boxID c.BoxID,
-	config map[c.ProcessID]*a.AgentInfo,
+	config *map[c.ProcessID]*a.AgentInfo,
 	mstrPort c.PortNum) { // 0 if master conn not specified
 	// Check for illegal values
 	if mstrPort != 0 {
@@ -198,7 +198,7 @@ func InitAndRunServer(
 	}
 
 	// Populate the global variables and start the linkManager
-	gridConfig = config
+	gridConfig = *config
 	myBoxID = boxID
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort

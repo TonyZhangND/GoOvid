@@ -2,7 +2,6 @@ package configs
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -97,16 +96,4 @@ func Parse(configFile string) *map[c.ProcessID]*a.AgentInfo {
 		res[c.ProcessID(pid)] = parseAgentObject(obj.(map[string]interface{}))
 	}
 	return &res
-}
-
-// Prints the resulting map from running Parse()
-func printResult(res *map[c.ProcessID]*a.AgentInfo) {
-	fmt.Println(*res)
-	for k, v := range *res {
-		fmt.Printf("%v : %v\n", k, v)
-	}
-}
-
-func main() {
-	printResult(Parse("chat.json"))
 }
