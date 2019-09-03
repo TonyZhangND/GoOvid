@@ -20,9 +20,9 @@ import (
 var (
 	masterIP   string
 	masterPort c.PortNum
-	gridConfig map[c.ProcessID]*a.AgentInfo
+	gridConfig map[c.ProcessID]a.AgentInfo
 	myBoxID    c.BoxID
-	myAgents   map[c.ProcessID]*a.Agent
+	myAgents   map[c.ProcessID]a.Agent
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
 	msgLog     *messageLog
@@ -39,10 +39,14 @@ func serverInfo() string {
 
 // Sends a message to phyDest
 func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
-	destBox := gridConfig[phyDest].Box
+	destAgent, ok := gridConfig[phyDest]
+	if !ok {
+		fatalServerErrorf("Destination agent %v does not exist\n", phyDest)
+	}
+	destBox := destAgent.Box
 	if destBox == myBoxID {
 		// if sending to agent on this box
-		(*myAgents[phyDest]).Deliver(msg, destPort)
+		(myAgents[phyDest]).Deliver(msg, destPort)
 	} else {
 		// else sending to agent on some other box
 		s := fmt.Sprintf("%d %d %d %s", senderID, phyDest, destPort, msg)
@@ -90,7 +94,7 @@ func handleMasterMsg(data string) {
 	case "crash":
 		// self-destruct
 		for _, agent := range myAgents {
-			(*agent).Halt()
+			agent.Halt()
 		}
 		shouldRun = false
 		os.Exit(0)
@@ -115,7 +119,7 @@ func handleServerMsg(data string) {
 		checkFatalServerErrorf(err, "Cannot parse destID of incoming message '%s'\n", data)
 		destPort, err := strconv.ParseInt(dataSlice[2], 10, 16)
 		checkFatalServerErrorf(err, "Cannot parse destPort of incoming message '%s'\n", data)
-		(*myAgents[c.ProcessID(destID)]).Deliver(dataSlice[3], c.PortNum(destPort))
+		myAgents[c.ProcessID(destID)].Deliver(dataSlice[3], c.PortNum(destPort))
 	}
 }
 
@@ -138,42 +142,57 @@ func getAllBoxes() []c.BoxID {
 }
 
 // Helper: initializes all agents on this box
-func initAgents() map[c.ProcessID]*a.Agent {
+func initAgents() map[c.ProcessID]a.Agent {
 	if gridConfig == nil {
 		c.FatalOvidErrorf("grid cofiguration not initialized\n")
 	}
 	// Make map containing all agent structs on this box
-	myAg := make(map[c.ProcessID]*a.Agent)
+	myAg := make(map[c.ProcessID]a.Agent)
 	for k, agentInfo := range gridConfig {
 		if agentInfo.Box == myBoxID {
 			// allocate the struct
 			ag := a.NewAgent(agentInfo.Type)
-			myAg[k] = &ag
+			myAg[k] = ag
 		}
 	}
 	// Initialize and run each agent on this box
 	for agentID, agent := range myAg {
-		debugPrintf(int(agentID), "Routing table\n%v\n\n", gridConfig[agentID].Routes)
+		// Notice that for each of the following closures, we are implementing a closure
+		// generator rather than a closure itself. This is because in Go, variables
+		// declared in for loops are passed by reference. In other words, bad
+		// things happen when you use a loop variable in the closure, because those values
+		// can change from underneath you, and the closure is then messed up.
+		// However, fuction params are passed by value. Thus, we use this generator
+		// technique to "freeze" the agentID variable for each closure, for each agent.
+
 		// Create custom send func using closure
-		sendMsg := func(vDest c.ProcessID, msg string) {
-			phyDest := gridConfig[agentID].Routes[vDest].DestID
-			destPort := gridConfig[agentID].Routes[vDest].DestPort
-			debugPrintf(-1, "Sending %s to {%v:%v}\n", msg, phyDest, destPort)
-			send(agentID, phyDest, destPort, msg)
+		sendFuncGen := func(id c.ProcessID) func(vDest c.ProcessID, msg string) {
+			return func(vDest c.ProcessID, msg string) {
+				phyDest := gridConfig[id].Routes[vDest].DestID
+				destPort := gridConfig[id].Routes[vDest].DestPort
+				send(id, phyDest, destPort, msg)
+			}
 		}
 		// Create custom error func using closure
-		fatalAgentErrorf := func(s string, a ...interface{}) {
-			errMsg := fmt.Sprintf(s, a...)
-			fmt.Printf("Error : Agent %v : %s", agentID, errMsg)
-			debug.PrintStack()
-			(*agent).Halt()
+		fatalAgentErrorfGen := func(id c.ProcessID) func(s string, a ...interface{}) {
+			return func(s string, a ...interface{}) {
+				errMsg := fmt.Sprintf(s, a...)
+				fmt.Printf("Error : Agent %v : %s", id, errMsg)
+				debug.PrintStack()
+				agent.Halt()
+			}
 		}
 		// Create custom debugPrintf func using closure
-		agentDebugPrintf := func(s string, a ...interface{}) {
-			debugPrintf(int(agentID), s, a...)
+		agentDebugPrintfGen := func(id c.ProcessID) func(s string, a ...interface{}) {
+			return func(s string, a ...interface{}) {
+				debugPrintf(int(id), s, a...)
+			}
 		}
 		// Initialize the agent
-		(*agent).Init(gridConfig[agentID].RawAttrs, sendMsg, fatalAgentErrorf, agentDebugPrintf)
+		agent.Init(gridConfig[agentID].RawAttrs,
+			sendFuncGen(agentID),
+			fatalAgentErrorfGen(agentID),
+			agentDebugPrintfGen(agentID))
 	}
 	return myAg
 }
@@ -181,7 +200,7 @@ func initAgents() map[c.ProcessID]*a.Agent {
 // InitAndRunServer is the main method of a server
 func InitAndRunServer(
 	boxID c.BoxID,
-	config *map[c.ProcessID]*a.AgentInfo,
+	config map[c.ProcessID]a.AgentInfo,
 	mstrPort c.PortNum) { // 0 if master conn not specified
 	// Check for illegal values
 	if mstrPort != 0 {
@@ -198,7 +217,7 @@ func InitAndRunServer(
 	}
 
 	// Populate the global variables and start the linkManager
-	gridConfig = *config
+	gridConfig = config
 	myBoxID = boxID
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
@@ -238,12 +257,10 @@ func InitAndRunServer(
 	}
 	// run my agents
 	for _, agent := range myAgents {
-		go (*agent).Run()
+		go agent.Run()
 	}
 	for shouldRun {
-		for shouldRun {
-			handleServerMsg(<-serverInChan)
-		}
+		handleServerMsg(<-serverInChan)
 	}
 	debugPrintf(-1, "Terminating\n")
 }

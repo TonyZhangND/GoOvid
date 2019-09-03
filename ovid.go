@@ -11,11 +11,12 @@ import (
 )
 
 // Prints the resulting map from running Parse()
-func printResult(res *map[comm.ProcessID]*agnt.AgentInfo) {
-	fmt.Println(*res)
-	for k, v := range *res {
+func printResult(res map[comm.ProcessID]agnt.AgentInfo) {
+	fmt.Println("\nPrinting agent map:")
+	for k, v := range res {
 		fmt.Printf("%v : %v\n", k, v)
 	}
+	fmt.Println("")
 }
 
 func main() {
@@ -28,10 +29,10 @@ func main() {
 
 	mp := comm.PortNum(*masterPort)
 	agentMap := conf.Parse(config)
-	printResult(agentMap)
+	// printResult(agentMap)
 
 	// start only if box is valid
-	for _, agent := range *agentMap {
+	for _, agent := range agentMap {
 		if agent.Box == myBox {
 			if *debugMode {
 				serv.DebugMode = true
