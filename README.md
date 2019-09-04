@@ -1,18 +1,20 @@
 # GoOvid 
 
 
-* [What is this](#what-is-this)
-* [Why this](#why-this)
-* [Usage](#usage)
-	+ [Agents](#agents)
-	+ [Boxes](#boxes)
-	+ [Configuration files](#configuration-files)
-	+ [More on virtual and physical agent identifiers](#more-on-virtual-and-physical-agent-identifiers)
-	+ [Starting a grid](#starting-a-grid)
-* [Demo Applications](#demo-applications)
-	+ [Simple Key-value-store](#simple-key-value-store)
-* [Testing the servers](#testing-the-servers)
-* [Requirements](#requirements)
+- [GoOvid](#goovid)
+	- [What is this](#what-is-this)
+	- [Why this](#why-this)
+	- [Usage](#usage)
+		- [Agents](#agents)
+		- [Boxes](#boxes)
+		- [Configuration files](#configuration-files)
+		- [More on virtual and physical agent identifiers](#more-on-virtual-and-physical-agent-identifiers)
+		- [Starting a grid](#starting-a-grid)
+	- [Demo Applications](#demo-applications)
+		- [Simple Key-value-store](#simple-key-value-store)
+	- [Testing the servers](#testing-the-servers)
+	- [Requirements](#requirements)
+	- [TODO](#todo)
 
 ## What is this
 
@@ -201,13 +203,13 @@ Notice that the kvs agent exists on a separate box as the client for failure iso
 To start the program, first boot up the kvs, by running on the command line
 
 ```
-/ovid configs/kvs.json 127.0.0.1:5001
+./ovid configs/kvs.json 127.0.0.1:5001
 ```
 
 Next, start the client and the tty agent by running on another terminal 
 
 ```
-/ovid configs/kvs.json 127.0.0.1:5000
+./ovid configs/kvs.json 127.0.0.1:5000
 ```
 
 and a text prompt will show up. 

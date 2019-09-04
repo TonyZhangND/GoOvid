@@ -18,16 +18,10 @@ const basePort c.PortNum = 3000
 var DebugMode = false
 
 // DebugPrintln prints the string s if debug mode is on
-// agentID is -1 when agent id is irrelevant in the context at which
-// this function is called.
-func debugPrintf(agentID int, s string, a ...interface{}) {
+func debugPrintf(s string, a ...interface{}) {
 	if DebugMode {
 		errMsg := fmt.Sprintf(s, a...)
-		if agentID < 0 {
-			fmt.Printf("Box %v : %s", myBoxID, errMsg)
-		} else {
-			fmt.Printf("Box %v, Agent %d : %s", myBoxID, agentID, errMsg)
-		}
+		fmt.Printf("Box %v : %s", myBoxID, errMsg)
 	}
 }
 

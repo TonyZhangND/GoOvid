@@ -99,7 +99,7 @@ func handleMasterMsg(data string) {
 		shouldRun = false
 		os.Exit(0)
 	default:
-		debugPrintf(-1, "Invalid command %v from master\n", command)
+		debugPrintf("Invalid command %v from master\n", command)
 	}
 }
 
@@ -185,7 +185,8 @@ func initAgents() map[c.ProcessID]*a.Agent {
 		// Create custom debugPrintf func using closure
 		agentDebugPrintfGen := func(id c.ProcessID) func(s string, a ...interface{}) {
 			return func(s string, a ...interface{}) {
-				debugPrintf(int(id), s, a...)
+				msg := fmt.Sprintf("Agent %v : %s", id, s)
+				debugPrintf(msg, a...)
 			}
 		}
 		// Initialize the agent
@@ -229,10 +230,10 @@ func InitAndRunServer(
 		serverInChan,
 		masterInChan)
 	msgLog = newMessageLog()
-	debugPrintf(-1, "Launching server...\n")
+	debugPrintf("Launching server...\n")
 	linkMgr.run()
 	time.Sleep(1 * time.Second)
-	debugPrintf(-1, serverInfo())
+	debugPrintf(serverInfo())
 
 	// Initialize my agents
 	myAgents = initAgents()
@@ -262,5 +263,5 @@ func InitAndRunServer(
 	for shouldRun {
 		handleServerMsg(<-serverInChan)
 	}
-	debugPrintf(-1, "Terminating\n")
+	debugPrintf("Terminating\n")
 }
