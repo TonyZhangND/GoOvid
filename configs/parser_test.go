@@ -9,7 +9,7 @@ import (
 
 // Tests the correctness of the parser on chat.json
 func TestParser_Chat(t *testing.T) {
-	res := *Parse("chat.json")
+	res := Parse("chat.json")
 
 	// check agent 10
 	agent := *res[c.ProcessID(10)]
