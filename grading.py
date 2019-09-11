@@ -5,7 +5,7 @@ import shutil
 os.system('./build')
 
 test_output = 'test_output'
-tests = 'tests'
+tests = 'tests/server_tests'
 if len(sys.argv) == 2:
     tests = sys.argv[1]
 try:
@@ -21,7 +21,7 @@ for f in test_list:
         if f[len(f) - len('.input'):] == '.input':
             fn = f[:len(f) - len('.input')]
             print(fn),
-            os.system('python master.py tests/test.json < ' + abs_f + \
+            os.system('python master.py tests/server_tests/test.json < ' + abs_f + \
                       ' 2> ' + join(test_output, fn+'.err') + \
                       ' > ' + join(test_output, fn+'.output'))
 
