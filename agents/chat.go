@@ -49,6 +49,9 @@ func (ca *ChatAgent) Halt() {
 func (ca *ChatAgent) Deliver(data string, port c.PortNum) {
 	ca.debugPrintf("delivering %v\n", data)
 	dataSlice := strings.SplitN(strings.TrimSpace(data), " ", 2)
+	if len(dataSlice) == 1 {
+		return // ignore empty messages
+	}
 	sender, msg := dataSlice[0], dataSlice[1]
 	fmt.Printf("\n%s > %s\n%s > ", sender, msg, ca.userName)
 }
@@ -65,8 +68,10 @@ func (ca *ChatAgent) Run() {
 			ca.Halt()
 			ca.fatalAgentErrorf("Invalid input %v in chatAgent\n", input)
 		}
-		for _, vDest := range ca.contacts {
-			ca.send(vDest, fmt.Sprintf("%s %s", ca.userName, strings.TrimSpace(input)))
+		if len(input) > 1 { // ignore empty messages, an empty msg is "\n"
+			for _, vDest := range ca.contacts {
+				ca.send(vDest, fmt.Sprintf("%s %s", ca.userName, strings.TrimSpace(input)))
+			}
 		}
 	}
 }
