@@ -2,6 +2,8 @@ package configs
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"strconv"
 
@@ -51,7 +53,7 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 				checkDecodeError(err, vidRaw)
 				rt := rtRaw.(map[string]interface{})
 				if len(rt) != 1 {
-					c.FatalOvidErrorf("Invalid route %v\n", rtRaw)
+					c.FatalOvidErrorf("Invalid route entry %v\n", rtRaw)
 				}
 				// parse the json object for the link
 				route := c.Route{} // alloc a Route struct to be filled
@@ -72,13 +74,30 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 	return agent
 }
 
+// IsValid returns false if config is detected as invalid. Otherwise returns true.
+func isValid(config map[c.ProcessID]*a.AgentInfo) (bool, error) {
+
+	// Check for routes pointing to non-existent agents
+	for pid, agent := range config {
+		for vdest, route := range agent.Routes {
+			pdest := route.DestID
+			if _, ok := config[pdest]; !ok {
+				msg := fmt.Sprintf("Invalid destination %v : { %v : %v } in routing table of agent %v",
+					vdest, pdest, route.DestPort, pid)
+				return false, errors.New(msg)
+			}
+		}
+	}
+	return true, nil
+}
+
 // Parse reads the ovid configuration in configFile, and returns a pointer
 // to a map containing the AgentInfo objects in the configuration
 func Parse(configFile string) map[c.ProcessID]*a.AgentInfo {
 	// Read the file
 	dat, err := ioutil.ReadFile(configFile)
 	if err != nil {
-		c.FatalOvidErrorf("Cannot read %s. %v \n", configFile, err)
+		c.FatalOvidErrorf("%v \n", err)
 	}
 
 	// Decode the file into a map[string]interface{}
@@ -94,6 +113,12 @@ func Parse(configFile string) map[c.ProcessID]*a.AgentInfo {
 		pid, err := strconv.ParseUint(id, 10, 16)
 		checkDecodeError(err, configFile)
 		res[c.ProcessID(pid)] = parseAgentObject(obj.(map[string]interface{}))
+	}
+
+	// check for validity
+	ok, err := isValid(res)
+	if !ok {
+		c.FatalOvidErrorf("%v \n", err)
 	}
 	return res
 }

@@ -1,15 +1,18 @@
 package configs
 
 import (
+	"os"
+	"os/exec"
 	"testing"
 
 	a "github.com/TonyZhangND/GoOvid/agents"
 	c "github.com/TonyZhangND/GoOvid/commons"
+	p "github.com/TonyZhangND/GoOvid/configs"
 )
 
 // Tests the correctness of the parser on chat.json
 func TestParser_Chat(t *testing.T) {
-	res := Parse("chat.json")
+	res := p.Parse("../../configs/chat.json")
 
 	// check agent 10
 	agent := *res[c.ProcessID(10)]
@@ -76,4 +79,31 @@ func TestParser_Chat(t *testing.T) {
 			t.Errorf("agent 20 has invalid attr %s", k)
 		}
 	}
+}
+
+// Tests if the parser catches issues in invalid configurations
+func TestParser_Invalid(t *testing.T) {
+	if os.Getenv("CRASHER") == "1" {
+		p.Parse("invalid1.json")
+		return
+	}
+	cmd1 := exec.Command(os.Args[0], "-test.run=TestParser_Invalid")
+	cmd1.Env = append(os.Environ(), "CRASHER=1")
+	err1 := cmd1.Run()
+	if e, ok := err1.(*exec.ExitError); ok && !e.Success() {
+		return
+	}
+	t.Fatalf("process ran with err %v, want exit status 1", err1)
+
+	if os.Getenv("CRASHER") == "1" {
+		p.Parse("invalid2.json")
+		return
+	}
+	cmd2 := exec.Command(os.Args[0], "-test.run=TestParser_Invalid")
+	cmd2.Env = append(os.Environ(), "CRASHER=1")
+	err2 := cmd2.Run()
+	if e, ok := err2.(*exec.ExitError); ok && !e.Success() {
+		return
+	}
+	t.Fatalf("process ran with err %v, want exit status 1", err2)
 }
