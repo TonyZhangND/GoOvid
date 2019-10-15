@@ -48,7 +48,7 @@ func (kvs *KVSAgent) Init(attrs map[string]interface{},
 	kvs.logger = log.New(kvs.logFile, "", log.LstdFlags)
 }
 
-// Halt stops the execution of ca.
+// Halt stops the execution of kvs.
 func (kvs *KVSAgent) Halt() {
 	kvs.isActive = false
 	kvs.logFile.Close()
