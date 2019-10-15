@@ -1,4 +1,4 @@
-package agents
+package paxos
 
 // This file contains the definition and logic of a paxos agent.
 // The PaxosAgent type must implement the Agent interface.
@@ -10,8 +10,8 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
-// PaxosAgent struct contains the information inherent to a paxos agent
-type PaxosAgent struct {
+// ReplicaAgent struct contains the information inherent to a paxos agent
+type ReplicaAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})
 	debugPrintf      func(s string, a ...interface{})
@@ -49,29 +49,29 @@ type ballot struct {
 }
 
 // Init fills the empty kvs struct with this agent's fields and attributes.
-func (paxos *PaxosAgent) Init(attrs map[string]interface{},
+func (replica *ReplicaAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
 	fatalAgentErrorf func(errMsg string, a ...interface{}),
 	debugPrintf func(s string, a ...interface{})) {
-	paxos.send = send
-	paxos.fatalAgentErrorf = fatalAgentErrorf
-	paxos.debugPrintf = debugPrintf
-	paxos.isActive = false
-	paxos.inMemStore = make(map[string]string)
+	replica.send = send
+	replica.fatalAgentErrorf = fatalAgentErrorf
+	replica.debugPrintf = debugPrintf
+	replica.isActive = false
+	replica.inMemStore = make(map[string]string)
 
 }
 
 // Halt stops the execution of paxos.
-func (paxos *PaxosAgent) Halt() {
-	paxos.isActive = false
+func (replica *ReplicaAgent) Halt() {
+	replica.isActive = false
 }
 
 // Deliver a message
-func (paxos *PaxosAgent) Deliver(request string, port c.PortNum) {
+func (replica *ReplicaAgent) Deliver(request string, port c.PortNum) {
 
 }
 
 // Run begins the execution of the paxos agent.
-func (paxos *PaxosAgent) Run() {
-	paxos.isActive = true
+func (replica *ReplicaAgent) Run() {
+	replica.isActive = true
 }
