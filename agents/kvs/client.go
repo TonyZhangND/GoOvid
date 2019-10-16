@@ -1,4 +1,4 @@
-package agents
+package kvs
 
 // This file contains the definition and logic of a client agent.
 // A client agent acts as the client of a key value store. It sends requests to the kvs,

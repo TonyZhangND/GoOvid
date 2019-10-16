@@ -4,6 +4,7 @@ package agents
 // In particular, it contains the Agent interface that all agents must implement.
 
 import (
+	"github.com/TonyZhangND/GoOvid/agents/kvs"
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
@@ -64,11 +65,11 @@ func NewAgent(t AgentType) Agent {
 	case Dummy:
 		return &DummyAgent{}
 	case KVS:
-		return &KVSAgent{}
+		return &kvs.ReplicaAgent{}
 	case Client:
-		return &ClientAgent{}
+		return &kvs.ClientAgent{}
 	case TTY:
-		return &TTYAgent{}
+		return &kvs.TTYAgent{}
 	default:
 		c.FatalOvidErrorf("Invalid agent type for agent %v\n", t)
 		return nil

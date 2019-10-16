@@ -1,4 +1,4 @@
-package agents
+package kvs
 
 // This file contains the definition and logic of a kvs agent.
 // A kvs implements a key-value-store with a "put" and "get" API. It ensures data
@@ -16,8 +16,8 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
-// KVSAgent struct contains the information inherent to a kvs agent
-type KVSAgent struct {
+// ReplicaAgent struct contains the information inherent to a kvs replica
+type ReplicaAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})
 	debugPrintf      func(s string, a ...interface{})
@@ -28,7 +28,7 @@ type KVSAgent struct {
 }
 
 // Init fills the empty kvs struct with this agent's fields and attributes.
-func (kvs *KVSAgent) Init(attrs map[string]interface{},
+func (kvs *ReplicaAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
 	fatalAgentErrorf func(errMsg string, a ...interface{}),
 	debugPrintf func(s string, a ...interface{})) {
@@ -49,7 +49,7 @@ func (kvs *KVSAgent) Init(attrs map[string]interface{},
 }
 
 // Halt stops the execution of kvs.
-func (kvs *KVSAgent) Halt() {
+func (kvs *ReplicaAgent) Halt() {
 	kvs.isActive = false
 	kvs.logFile.Close()
 }
@@ -57,7 +57,7 @@ func (kvs *KVSAgent) Halt() {
 // Deliver a message of the format "<sender physical id> get <key>" or
 // "<sender physical id> put <key> <data>"
 // The kvs agent expects all client requests to enter via port 1.
-func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
+func (kvs *ReplicaAgent) Deliver(request string, port c.PortNum) {
 	kvs.debugPrintf("KVS received request %s\n", request)
 	if port != 1 {
 		kvs.fatalAgentErrorf("Unexpected request %s in port %v\n", request, port)
@@ -96,6 +96,6 @@ func (kvs *KVSAgent) Deliver(request string, port c.PortNum) {
 }
 
 // Run begins the execution of the kvs agent.
-func (kvs *KVSAgent) Run() {
+func (kvs *ReplicaAgent) Run() {
 	kvs.isActive = true
 }

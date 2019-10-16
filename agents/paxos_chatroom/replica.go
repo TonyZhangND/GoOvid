@@ -10,7 +10,7 @@ import (
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
-// ReplicaAgent struct contains the information inherent to a paxos agent
+// ReplicaAgent struct contains the information inherent to a paxos replica
 type ReplicaAgent struct {
 	send             func(vDest c.ProcessID, msg string)
 	fatalAgentErrorf func(errMsg string, a ...interface{})

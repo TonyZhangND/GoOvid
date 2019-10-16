@@ -1,4 +1,4 @@
-package agents
+package kvs
 
 // This file contains the definition and logic of a tty agent.
 // A tty agent is used to interact with the client of a key value store.
@@ -50,7 +50,7 @@ func (tty *TTYAgent) Deliver(data string, port c.PortNum) {
 	tty.block = false
 }
 
-// Run begins the execution of the ca agent.
+// Run begins the execution of the tty agent.
 // commands are of the format "put <key> <value>" or "get <key>", where
 //		  <key> does not contain spaces
 func (tty *TTYAgent) Run() {
