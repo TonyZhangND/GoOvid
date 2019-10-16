@@ -1,3 +1,4 @@
+# System and workspace files
 .DS_Store
 .vscode/
 GoOvid.code-workspace
@@ -5,7 +6,6 @@ GoOvid.code-workspace
 ovid
 test_output/
 tmp/
-
 chatroom/test_output
-
 scratch/
+configs/paxos.json 
