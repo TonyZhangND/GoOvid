@@ -1,8 +1,7 @@
 package paxos
 
 // This file contains the definition and logic of a paxos agent.
-// The PaxosAgent type must implement the Agent interface.
-// Requirement: keys do not contain whitespace
+// The ReplicaAgent type must implement the Agent interface.
 
 import (
 	mapset "github.com/deckarep/golang-set"

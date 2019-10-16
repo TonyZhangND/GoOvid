@@ -1,6 +1,6 @@
 {
 	"100": {
-		"type": "tty",
+		"type": "kvs_tty",
 		"box": "127.0.0.1:5000",
 		"attrs": { },
 		"routes": {
@@ -8,7 +8,7 @@
 		}
 	},
 	"200": {
-		"type" : "client",
+		"type" : "kvs_client",
 		"box" : "127.0.0.1:5000",
 		"attrs" : {
 			"myid" : 200
@@ -19,7 +19,7 @@
 		}
 	},
 	"300" : {
-		"type" : "kvs",
+		"type" : "kvs_replica",
 		"box" : "127.0.0.1:5001",
 		"attrs" : { 
             "log" : "tmp/300.log"

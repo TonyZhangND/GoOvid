@@ -5,6 +5,7 @@ package agents
 
 import (
 	"github.com/TonyZhangND/GoOvid/agents/kvs"
+	paxos "github.com/TonyZhangND/GoOvid/agents/paxos_chatroom"
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
@@ -17,12 +18,18 @@ const (
 	Dummy AgentType = iota
 	// Chat agent enum
 	Chat AgentType = iota
-	// KVS agent enum
+	// KVS replica agent enum
 	KVS AgentType = iota
-	// Client agent enum
-	Client AgentType = iota
-	// TTY agent enum
-	TTY AgentType = iota
+	// KVS client agent enum
+	KVSClient AgentType = iota
+	// KVS tty agent enum
+	KVSTTY AgentType = iota
+	// Paxos replica agent enum
+	PaxosReplica AgentType = iota
+	// Paxos client agent enum
+	PaxosClient AgentType = iota
+	// Paxos controller agent enum
+	PaxosController AgentType = iota
 )
 
 // Agent is an interface that all agents must implement
@@ -66,10 +73,16 @@ func NewAgent(t AgentType) Agent {
 		return &DummyAgent{}
 	case KVS:
 		return &kvs.ReplicaAgent{}
-	case Client:
+	case KVSClient:
 		return &kvs.ClientAgent{}
-	case TTY:
+	case KVSTTY:
 		return &kvs.TTYAgent{}
+	case PaxosReplica:
+		return &paxos.ReplicaAgent{}
+	case PaxosClient:
+		return &paxos.ClientAgent{}
+	case PaxosController:
+		return &paxos.ControllerAgent{}
 	default:
 		c.FatalOvidErrorf("Invalid agent type for agent %v\n", t)
 		return nil

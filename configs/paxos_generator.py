@@ -78,13 +78,13 @@ def generate(f, num_clients, client_mode, log_mode):
     clients = [CLIENT_BASE_ID + i for i in range(num_clients)]
     agents = []
     for rep in replicas:
-        agents.append(Agent(rep, 'replica', REPLICA_BASE_PORT + rep))
+        agents.append(Agent(rep, 'paxos_replica', REPLICA_BASE_PORT + rep))
     for clt in clients:
-        agents.append(Agent(clt, 'client', CLIENT_BASE_PORT + clt))
+        agents.append(Agent(clt, 'paxos_client', CLIENT_BASE_PORT + clt))
     
     # Populate agent attributes
     for agent in agents:
-        if agent.kind == 'replica':
+        if agent.kind == 'paxos_replica':
             agent.attrs["myid"] = agent.id
             agent.attrs["replicas"] = replicas
             agent.attrs["clients"] = clients
@@ -100,7 +100,7 @@ def generate(f, num_clients, client_mode, log_mode):
 
     # Populate agent routing tables
     for agent in agents:
-        if agent.kind == 'replica':
+        if agent.kind == 'paxos_replica':
             # Connect to every replica and every client
             for rep in replicas:
                 agent.routes.append((rep, 0))  # TODO: Use port 0 for now
@@ -111,7 +111,7 @@ def generate(f, num_clients, client_mode, log_mode):
                 agent.routes.append((rep, 0))
     
     # Add controller agent
-    controller = Agent(999, "controller", 9999)
+    controller = Agent(999, "paxos_controller", 9999)
     for rep in replicas:
         controller.routes.append((rep, 0))  
     for clt in clients:

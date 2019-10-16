@@ -29,12 +29,18 @@ func parseAgentObject(agentObj map[string]interface{}) *a.AgentInfo {
 				agent.Type = a.Chat
 			case "dummy":
 				agent.Type = a.Dummy
-			case "kvs":
+			case "kvs_replica":
 				agent.Type = a.KVS
-			case "client":
-				agent.Type = a.Client
-			case "tty":
-				agent.Type = a.TTY
+			case "kvs_client":
+				agent.Type = a.KVSClient
+			case "kvs_tty":
+				agent.Type = a.KVSTTY
+			case "paxos_replica":
+				agent.Type = a.PaxosReplica
+			case "paxos_client":
+				agent.Type = a.PaxosClient
+			case "paxos_controller":
+				agent.Type = a.PaxosController
 			default:
 				c.FatalOvidErrorf("Unknown agent type %v\n", v)
 			}
