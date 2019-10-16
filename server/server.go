@@ -6,6 +6,7 @@ package server
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"runtime/debug"
 	"sort"
@@ -23,6 +24,7 @@ var (
 	gridConfig map[c.ProcessID]*a.AgentInfo
 	myBoxID    c.BoxID
 	myAgents   map[c.ProcessID]*a.Agent
+	lossRate   float64
 	shouldRun  bool // loop condition for the server's routines
 	linkMgr    *linkManager
 	msgLog     *messageLog
@@ -39,10 +41,20 @@ func serverInfo() string {
 
 // Sends a message to phyDest
 func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
+	// Check destination is valid
 	destAgent, ok := gridConfig[phyDest]
 	if !ok {
 		fatalServerErrorf("Destination agent %v does not exist\n", phyDest)
 	}
+
+	// Drop message according to loss rate
+	rand.Seed(time.Now().UnixNano())
+	if rand.Float64() <= lossRate {
+		debugPrintf("Dropping message %s from %v to %v\n", msg, senderID, phyDest)
+		return
+	}
+
+	// Send the message
 	destBox := destAgent.Box
 	if destBox == myBoxID {
 		// if sending to agent on this box
@@ -202,7 +214,9 @@ func initAgents() map[c.ProcessID]*a.Agent {
 func InitAndRunServer(
 	boxID c.BoxID,
 	config map[c.ProcessID]*a.AgentInfo,
-	mstrPort c.PortNum) { // 0 if master conn not specified
+	mstrPort c.PortNum, // 0 if master conn not specified
+	loss float64) {
+
 	// Check for illegal values
 	if mstrPort != 0 {
 		if mstrPort < 1024 {
@@ -222,6 +236,7 @@ func InitAndRunServer(
 	myBoxID = boxID
 	masterIP = "127.0.0.1"
 	masterPort = mstrPort
+	lossRate = loss
 	shouldRun = true
 	serverInChan := make(chan string) // used to receive inter-server messages
 	masterInChan := make(chan string) // used to receive messages from the master

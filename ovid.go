@@ -23,11 +23,15 @@ func main() {
 	// process command line arguments and parse config
 	masterPort := flag.Int("master", 0, "Local port number for master connection")
 	debugMode := flag.Bool("debug", false, "Toggles debugMode to on")
+	loss := flag.Float64("loss", 0, "Rate at which a server drops inter-agent messages")
 	flag.Parse()
 	config := flag.Args()[0]
 	myBox := comm.ParseBoxAddr(flag.Args()[1])
 
 	mp := comm.PortNum(*masterPort)
+	if *loss < 0 || *loss > 1. {
+		comm.FatalOvidErrorf("loss must be in range 0-1\n")
+	}
 	agentMap := conf.Parse(config)
 	// printResult(agentMap)
 
@@ -37,7 +41,7 @@ func main() {
 			if *debugMode {
 				serv.DebugMode = true
 			}
-			serv.InitAndRunServer(myBox, agentMap, mp)
+			serv.InitAndRunServer(myBox, agentMap, mp, *loss)
 			return
 		}
 	}
