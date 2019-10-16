@@ -41,15 +41,15 @@ class Agent(object):
 
     def __str__(self):
         return "\n".join(
-            [f"\t{self.id}: " + " {", 
+            [f"\t\"{self.id}\" : " + " {", 
             f"\t\t\"type\" : \"{self.kind}\",",
             f"\t\t\"box\" : \"{self.box}\",",
             f"\t\t\"attrs\" : " + "{",
-            f"\t\t\t" + f"\n\t\t\t".join(self.gen_attr_lines()),
+            f"\t\t\t" + f",\n\t\t\t".join(self.gen_attr_lines()),
             "\t\t},",
             f"\t\t\"routes\" : " + "{",
-            f"\t\t\t" + f"\n\t\t\t".join(self.gen_route_lines()),
-            "\t\t},",
+            f"\t\t\t" + f",\n\t\t\t".join(self.gen_route_lines()),
+            "\t\t}",
             "\t}"
             ]
         )
@@ -57,8 +57,7 @@ class Agent(object):
 
 def print_agents(agents):
     print("{")
-    for ag in agents:
-        print(str(ag))
+    print(",\n".join([str(ag) for ag in agents]))
     print("}")
 
 
