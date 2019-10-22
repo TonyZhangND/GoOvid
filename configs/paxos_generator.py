@@ -109,14 +109,14 @@ def generate(f, num_clients, client_mode, log_mode):
                 agent.routes.append((clt, 0))
         else:  # agent.kind == 'client
             for rep in replicas:
-                agent.routes.append((rep, 0))
+                agent.routes.append((rep, 2))  # replicas listen for client on port 2
     
     # Add controller agent
     controller = Agent(999, "paxos_controller", 9999)
     controller.attrs["replicas"] = replicas
     controller.attrs["clients"] = clients
     for rep in replicas:
-        controller.routes.append((rep, 9))  
+        controller.routes.append((rep, 9))  # all agents listen for controller on port 9
     for clt in clients:
         controller.routes.append((clt, 9))
     agents.append(controller)

@@ -68,11 +68,14 @@ func (replica *ReplicaAgent) Halt() {
 // Deliver a message
 func (replica *ReplicaAgent) Deliver(request string, port c.PortNum) {
 	switch port {
+	case 2:
+		// Command from client
+		replica.debugPrintf("%s\n", request)
 	case 9:
 		// Command from controller
 		replica.debugPrintf("%s\n", request)
 	default:
-		replica.fatalAgentErrorf("Received '%s' in unexpected port %v", request, port)
+		replica.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
 	}
 }
 
