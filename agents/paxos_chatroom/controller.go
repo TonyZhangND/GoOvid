@@ -112,7 +112,7 @@ func (ctr *ControllerAgent) Run() {
 			target := payload[0]
 			if target == "primary" {
 				for rep := range ctr.replicas {
-					ctr.send(rep, fmt.Sprintf("kill primary"))
+					ctr.send(rep, "kill primary")
 				}
 			} else { // assasinate a specific target
 				tango, err := strconv.ParseUint(target, 10, 64)
