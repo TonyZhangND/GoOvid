@@ -106,7 +106,7 @@ def generate(f, num_clients, client_mode, log_mode):
             for rep in replicas:
                 agent.routes.append((rep, 0))  # TODO: Use port 0 for now
             for clt in clients:
-                agent.routes.append((clt, 0))
+                agent.routes.append((clt, 1))  # clients listen for replicas on port 1
         else:  # agent.kind == 'client
             for rep in replicas:
                 agent.routes.append((rep, 2))  # replicas listen for client on port 2

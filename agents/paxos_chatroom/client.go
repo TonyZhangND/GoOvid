@@ -5,6 +5,7 @@ package paxos
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +75,22 @@ func (clt *ClientAgent) Halt() {
 // Deliver a message
 func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 	switch port {
-	case 9:
+	case 1: // incoming msg from replica
+		msgSlice := strings.SplitN(request, " ", 2)
+		if msgSlice[0] != "committed" {
+			clt.fatalAgentErrorf(
+				"Received unexpected command '%s' in unexpected port %v",
+				request, port)
+		}
+		n, _ := strconv.ParseUint(msgSlice[1], 10, 64)
+		if clt.reqQueue[0].reqNum == n {
+			// If this is a response to a currently outstanding request,
+			// stop the ticker and declare the request as done
+			clt.reqQueue[0].ticker.Stop()
+			clt.reqQueue[0].done <- true
+		}
+
+	case 9: // incoming msg from controller
 		// Receive msg "issue <m>"
 		msgSlice := strings.SplitN(request, " ", 2)
 		if msgSlice[0] != "issue" {
@@ -106,8 +122,10 @@ func (clt *ClientAgent) mainThread() {
 	defer wg.Done()
 	for clt.isActive {
 		if len(clt.reqQueue) == 0 {
+			// No pending requests. Take a break, have a KitKat
 			time.Sleep(sleepDuration)
-		} else { // Process first message in queue
+		} else {
+			// Process first message in queue
 			r := clt.reqQueue[0] // Outstanding request
 
 			// Broadcast request
