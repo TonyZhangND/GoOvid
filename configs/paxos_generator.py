@@ -26,6 +26,7 @@ class Agent(object):
         res = []
         for k in self.attrs.keys():
             if type(self.attrs[k]) == str:
+                # if it's a string attr, wrap it in quotes
                 res.append(f"\"{k}\" : \"{self.attrs[k]}\"")
             else:
                 res.append(f"\"{k}\" : {str(self.attrs[k])}")
@@ -112,6 +113,8 @@ def generate(f, num_clients, client_mode, log_mode):
     
     # Add controller agent
     controller = Agent(999, "paxos_controller", 9999)
+    controller.attrs["replicas"] = replicas
+    controller.attrs["clients"] = clients
     for rep in replicas:
         controller.routes.append((rep, 9))  
     for clt in clients:
