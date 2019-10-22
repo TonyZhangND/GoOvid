@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
@@ -19,6 +20,8 @@ type ControllerAgent struct {
 	fatalAgentErrorf func(errMsg string, a ...interface{})
 	debugPrintf      func(s string, a ...interface{})
 	isActive         bool
+	clients          map[c.ProcessID]int // using map because we want search capability
+	replicas         map[c.ProcessID]int
 }
 
 // Init fills the empty ctr struct with this agent's fields and attributes.
@@ -30,6 +33,17 @@ func (ctr *ControllerAgent) Init(attrs map[string]interface{},
 	ctr.fatalAgentErrorf = fatalAgentErrorf
 	ctr.debugPrintf = debugPrintf
 	ctr.isActive = false
+
+	// Parse and store attributes
+	ctr.clients, ctr.replicas = make(map[c.ProcessID]int), make(map[c.ProcessID]int)
+	for _, x := range attrs["clients"].([]interface{}) {
+		id := c.ProcessID(x.(float64))
+		ctr.clients[id] = 0
+	}
+	for _, x := range attrs["replicas"].([]interface{}) {
+		id := c.ProcessID(x.(float64))
+		ctr.replicas[id] = 0
+	}
 }
 
 // Halt stops the execution of the agent.
@@ -54,16 +68,70 @@ func (ctr *ControllerAgent) Run() {
 		if err != nil {
 			ctr.Halt()
 			ctr.fatalAgentErrorf("Invalid input %v in controller\n", input)
+			os.Exit(0)
 		}
-		input = strings.TrimSpace(input)
-		if len(input) > 1 { // ignore empty messages, an empty msg is "\n"
-			if input == "exit" {
-				fmt.Println("Terminating paxos cluster")
-				ctr.Halt()
-				os.Exit(0)
+		if len(strings.TrimSpace(input)) < 1 {
+			// Ignore empty messages
+			continue
+		}
+		inputSlice := strings.SplitN(strings.TrimSpace(input), " ", 2)
+		command := inputSlice[0]
+		switch command {
+		case "exit":
+			fmt.Println("Terminating paxos cluster")
+			ctr.Halt()
+			os.Exit(0)
+		case "req": // Issue a client request
+			payload := strings.SplitN(inputSlice[1], " ", 2)
+			if len(payload) < 2 {
+				fmt.Println("Invalid input")
+				continue
 			}
-			//TODO: Process command
-			fmt.Printf(input)
+			destUint, err := strconv.ParseUint(payload[0], 10, 64)
+			if err != nil {
+				fmt.Printf("Invalid request destination %v\n", inputSlice[1])
+			}
+			dest := c.ProcessID(destUint)
+			_, ok := ctr.clients[dest]
+			if !ok {
+				fmt.Printf("Invalid client %v\n", dest)
+				continue
+			}
+			m := payload[1]
+			ctr.send(dest, fmt.Sprintf("issue %s", m))
+		case "kill": // Issue a kill command
+			payload := strings.Split(inputSlice[1], " ")
+			if len(payload) > 1 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			target := payload[0]
+			if target == "primary" {
+				for rep := range ctr.replicas {
+					ctr.send(rep, fmt.Sprintf("kill primary"))
+				}
+			} else { // assasinate a specific target
+				tango, err := strconv.ParseUint(target, 10, 64)
+				if err != nil {
+					fmt.Printf("Invalid assasination target %v\n", target)
+					continue
+				}
+				_, ok := ctr.replicas[c.ProcessID(tango)]
+				if !ok {
+					fmt.Printf("Invalid assasination target %v\n", target)
+					continue
+				}
+				ctr.send(c.ProcessID(tango), fmt.Sprintf("kill"))
+			}
+		case "dump":
+			//TODO
+			fmt.Println(command)
+		case "skip":
+			//TODO
+			fmt.Println(command)
+		default:
+			fmt.Println("Invalid command")
+			continue
 		}
 	}
 }
