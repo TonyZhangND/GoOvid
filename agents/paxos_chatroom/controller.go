@@ -82,6 +82,10 @@ func (ctr *ControllerAgent) Run() {
 			ctr.Halt()
 			os.Exit(0)
 		case "req": // Issue a client request
+			if len(inputSlice) < 2 {
+				fmt.Println("Invalid input")
+				continue
+			}
 			payload := strings.SplitN(inputSlice[1], " ", 2)
 			if len(payload) < 2 {
 				fmt.Println("Invalid input")
@@ -89,7 +93,7 @@ func (ctr *ControllerAgent) Run() {
 			}
 			destUint, err := strconv.ParseUint(payload[0], 10, 64)
 			if err != nil {
-				fmt.Printf("Invalid request destination %v\n", inputSlice[1])
+				fmt.Printf("Invalid request destination %v\n", payload[0])
 			}
 			dest := c.ProcessID(destUint)
 			_, ok := ctr.clients[dest]
@@ -124,11 +128,39 @@ func (ctr *ControllerAgent) Run() {
 				ctr.send(c.ProcessID(tango), fmt.Sprintf("kill"))
 			}
 		case "dump":
-			//TODO
-			fmt.Println(command)
+			if len(inputSlice) > 1 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			for rep := range ctr.replicas {
+				ctr.send(rep, fmt.Sprintf("dump"))
+			}
 		case "skip":
-			//TODO
-			fmt.Println(command)
+			if len(inputSlice) < 2 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			payload := strings.SplitN(inputSlice[1], " ", 2)
+			if len(payload) < 2 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			destUint, err := strconv.ParseUint(payload[0], 10, 64)
+			if err != nil {
+				fmt.Printf("Invalid request destination %v\n", payload[0])
+			}
+			dest := c.ProcessID(destUint)
+			_, ok := ctr.replicas[dest]
+			if !ok {
+				fmt.Printf("Invalid replica %v\n", dest)
+				continue
+			}
+			slot, err := strconv.ParseUint(payload[1], 10, 64)
+			if err != nil {
+				fmt.Printf("Invalid slot %v\n", inputSlice[1])
+				continue
+			}
+			ctr.send(dest, fmt.Sprintf("skip %d", slot))
 		default:
 			fmt.Println("Invalid command")
 			continue
