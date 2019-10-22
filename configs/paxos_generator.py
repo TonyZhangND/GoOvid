@@ -113,9 +113,9 @@ def generate(f, num_clients, client_mode, log_mode):
     # Add controller agent
     controller = Agent(999, "paxos_controller", 9999)
     for rep in replicas:
-        controller.routes.append((rep, 0))  
+        controller.routes.append((rep, 9))  
     for clt in clients:
-        controller.routes.append((clt, 0))
+        controller.routes.append((clt, 9))
     agents.append(controller)
     print_agents(agents)
 
