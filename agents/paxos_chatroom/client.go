@@ -6,18 +6,10 @@ package paxos
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
-
-const (
-	sleepDuration   = 100 * time.Millisecond
-	timeoutDuration = 5000 * time.Millisecond
-)
-
-var wg sync.WaitGroup
 
 // ClientAgent struct contains the information inherent to a paxos client
 type ClientAgent struct {
