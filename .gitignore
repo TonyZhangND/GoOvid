@@ -1,6 +1,7 @@
 # System and workspace files
 .DS_Store
 .vscode/
+nohup.out
 GoOvid.code-workspace
 
 ovid
