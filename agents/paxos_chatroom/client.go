@@ -33,7 +33,13 @@ func (client *ClientAgent) Halt() {
 
 // Deliver a message
 func (client *ClientAgent) Deliver(request string, port c.PortNum) {
-
+	switch port {
+	case 9:
+		// Command from controller
+		client.debugPrintf("%s\n", request)
+	default:
+		client.fatalAgentErrorf("Received '%s' in unexpected port %v", request, port)
+	}
 }
 
 // Run begins the execution of the paxos agent.

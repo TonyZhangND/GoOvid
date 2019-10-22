@@ -67,7 +67,13 @@ func (replica *ReplicaAgent) Halt() {
 
 // Deliver a message
 func (replica *ReplicaAgent) Deliver(request string, port c.PortNum) {
-
+	switch port {
+	case 9:
+		// Command from controller
+		replica.debugPrintf("%s\n", request)
+	default:
+		replica.fatalAgentErrorf("Received '%s' in unexpected port %v", request, port)
+	}
 }
 
 // Run begins the execution of the paxos agent.
