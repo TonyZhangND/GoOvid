@@ -35,8 +35,8 @@ type ClientAgent struct {
 type req struct {
 	reqNum uint64
 	m      string
-	ticker *time.Ticker // used to mark intervals after which request should be re-issued
-	done   chan bool    // used to stop ticker when request is committed
+	ticker *time.Ticker // used to mark intervals after which req should be re-issued
+	done   chan bool    // used to inform mainThread that req has been committed
 }
 
 // Init fills the empty client struct with this agent's fields and attributes.
