@@ -4,6 +4,11 @@ package paxos
 // The ReplicaAgent type must implement the Agent interface.
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	mapset "github.com/deckarep/golang-set"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
@@ -48,38 +53,50 @@ type ballot struct {
 }
 
 // Init fills the empty kvs struct with this agent's fields and attributes.
-func (replica *ReplicaAgent) Init(attrs map[string]interface{},
+func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	send func(vDest c.ProcessID, msg string),
 	fatalAgentErrorf func(errMsg string, a ...interface{}),
 	debugPrintf func(s string, a ...interface{})) {
-	replica.send = send
-	replica.fatalAgentErrorf = fatalAgentErrorf
-	replica.debugPrintf = debugPrintf
-	replica.isActive = false
-	replica.inMemStore = make(map[string]string)
+	rep.send = send
+	rep.fatalAgentErrorf = fatalAgentErrorf
+	rep.debugPrintf = debugPrintf
+	rep.isActive = false
+	rep.inMemStore = make(map[string]string)
 
 }
 
 // Halt stops the execution of paxos.
-func (replica *ReplicaAgent) Halt() {
-	replica.isActive = false
+func (rep *ReplicaAgent) Halt() {
+	rep.isActive = false
 }
 
 // Deliver a message
-func (replica *ReplicaAgent) Deliver(request string, port c.PortNum) {
+func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 	switch port {
 	case 2:
-		// Command from client
-		replica.debugPrintf("%s\n", request)
+		// Command from client, format <clientID, reqNum, m>
+		reqSlice := strings.SplitN(request, " ", 3)
+		id, err := strconv.ParseUint(reqSlice[0], 10, 64)
+		if err != nil {
+			rep.fatalAgentErrorf("Invalid request %s\n", request)
+		}
+
+		// TODO: Now just simulate processing and send reply
+		clientID := c.ProcessID(id)
+		reqNum, _ := strconv.ParseUint(reqSlice[1], 10, 64)
+		m := reqSlice[2]
+		time.Sleep(timeoutDuration * 3)
+		rep.debugPrintf("Replica commited <%d, %d, %s>\n", clientID, reqNum, m)
+		rep.send(clientID, fmt.Sprintf("committed %d", reqNum))
 	case 9:
 		// Command from controller
-		replica.debugPrintf("%s\n", request)
+		rep.debugPrintf("%s\n", request)
 	default:
-		replica.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
+		rep.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
 	}
 }
 
 // Run begins the execution of the paxos agent.
-func (replica *ReplicaAgent) Run() {
-	replica.isActive = true
+func (rep *ReplicaAgent) Run() {
+	rep.isActive = true
 }
