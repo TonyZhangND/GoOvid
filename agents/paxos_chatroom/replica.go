@@ -24,6 +24,8 @@ type ReplicaAgent struct {
 	replica          replicaState
 	acceptor         acceptorState
 	leader           leaderState
+
+	myID c.ProcessID
 }
 
 type replicaState struct {
@@ -63,6 +65,7 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.isActive = false
 	rep.inMemStore = make(map[string]string)
 
+	rep.myID = c.ProcessID(attrs["myid"].(float64))
 }
 
 // Halt stops the execution of paxos.
@@ -74,7 +77,7 @@ func (rep *ReplicaAgent) Halt() {
 func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 	switch port {
 	case 2:
-		// Command from client, format <clientID, reqNum, m>
+		// Command from client, format "<clientID> <reqNum> <m>"
 		reqSlice := strings.SplitN(request, " ", 3)
 		id, err := strconv.ParseUint(reqSlice[0], 10, 64)
 		if err != nil {
@@ -85,9 +88,11 @@ func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 		clientID := c.ProcessID(id)
 		reqNum, _ := strconv.ParseUint(reqSlice[1], 10, 64)
 		m := reqSlice[2]
-		time.Sleep(timeoutDuration * 3)
-		rep.debugPrintf("Replica commited <%d, %d, %s>\n", clientID, reqNum, m)
-		rep.send(clientID, fmt.Sprintf("committed %d", reqNum))
+		time.Sleep(timeoutDuration / 2)
+		rep.debugPrintf("Replica %d commited (%d, %d, %s)\n",
+			rep.myID, clientID, reqNum, m)
+		// Send response  "committed <clientID> <reqNum>"
+		rep.send(clientID, fmt.Sprintf("committed %d %d", clientID, reqNum))
 	case 9:
 		// Command from controller
 		rep.debugPrintf("%s\n", request)

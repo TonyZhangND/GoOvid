@@ -76,18 +76,26 @@ func (clt *ClientAgent) Halt() {
 func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 	switch port {
 	case 1: // incoming msg from replica
-		msgSlice := strings.SplitN(request, " ", 2)
+		msgSlice := strings.SplitN(request, " ", 3)
 		if msgSlice[0] != "committed" {
 			clt.fatalAgentErrorf(
-				"Received unexpected command '%s' in unexpected port %v",
+				"Received unexpected command '%s' in port %v\n",
 				request, port)
 		}
-		n, _ := strconv.ParseUint(msgSlice[1], 10, 64)
-		if clt.reqQueue[0].reqNum == n {
+		// Receive msg "committed <clientID> <reqNum>"
+		id, _ := strconv.ParseUint(msgSlice[1], 10, 64)
+		n, _ := strconv.ParseUint(msgSlice[2], 10, 64)
+		if c.ProcessID(id) != clt.myID {
+			clt.fatalAgentErrorf(
+				"Received unexpected commit response '%s'\n", request)
+		}
+		if len(clt.reqQueue) > 0 && clt.reqQueue[0].reqNum == n {
 			// If this is a response to a currently outstanding request,
 			// stop the ticker and declare the request as done
 			clt.reqQueue[0].ticker.Stop()
 			clt.reqQueue[0].done <- true
+			close(clt.reqQueue[0].done) // done with this request, close the channel
+			clt.reqQueue = clt.reqQueue[1:]
 		}
 
 	case 9: // incoming msg from controller
@@ -95,7 +103,7 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 		msgSlice := strings.SplitN(request, " ", 2)
 		if msgSlice[0] != "issue" {
 			clt.fatalAgentErrorf(
-				"Received unexpected command '%s' in unexpected port %v",
+				"Received unexpected command '%s' in unexpected port %v\n",
 				request, port)
 		}
 		// Append request to reqQueue
@@ -104,8 +112,9 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 			m:      msgSlice[1],
 			done:   make(chan bool)}
 		clt.reqQueue = append(clt.reqQueue, r)
+		clt.nextReqNum++
 	default:
-		clt.fatalAgentErrorf("Received '%s' in unexpected port %v", request, port)
+		clt.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
 	}
 }
 
@@ -128,7 +137,7 @@ func (clt *ClientAgent) mainThread() {
 			// Process first message in queue
 			r := clt.reqQueue[0] // Outstanding request
 
-			// Broadcast request
+			// Broadcast request "<clientID> <reqNum> <m>" to replicas
 			for rep := range clt.replicas {
 				clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
 			}
@@ -141,15 +150,16 @@ func (clt *ClientAgent) mainThread() {
 				case <-r.done:
 					// Request committed
 					committed = true
+					clt.debugPrintf("Client %d ack (%d, %d, %s) committed\n",
+						clt.myID, clt.myID, r.reqNum, r.m)
 				case <-r.ticker.C:
 					// Timer expired, resend request
-					clt.debugPrintf("Timer expired\n")
+					clt.debugPrintf("Timer expired for (%d, %d)\n", clt.myID, r.reqNum)
 					for rep := range clt.replicas {
 						clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
 					}
 				}
 			}
-			clt.reqQueue = clt.reqQueue[1:]
 		}
 	}
 }
