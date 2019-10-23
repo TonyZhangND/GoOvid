@@ -22,7 +22,8 @@ then
     echo "Invalid args: Mode is either 'script' or 'manual'."
     exit 1
 fi
-if [ $loss -gt 1 ] || [ $loss -lt 0 ] 
+
+if (( $(echo "$loss > 1" |bc -l) )) || (( $(echo "$loss < 0" |bc -l) ))
 then
     echo "Invalid args: Loss is a percentage between 0-1."
     exit 1
@@ -46,7 +47,7 @@ do
     let port=5000+$replicaID
     box="127.0.0.1:$port"
     let replicaID++
-    nohup ./ovid -debug configs/paxos.json $box &
+    nohup ./ovid -debug -loss=$4 configs/paxos.json $box &
 done
 
 # Start client boxes in background
