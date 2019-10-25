@@ -104,7 +104,7 @@ def generate(f, num_clients, client_mode, log_mode):
         if agent.kind == 'paxos_replica':
             # Connect to every replica and every client
             for rep in replicas:
-                agent.routes.append((rep, 0))  # TODO: Use port 0 for now
+                agent.routes.append((rep, 1))  # replicas listen for replicas on port 1
             for clt in clients:
                 agent.routes.append((clt, 1))  # clients listen for replicas on port 1
         else:  # agent.kind == 'client
