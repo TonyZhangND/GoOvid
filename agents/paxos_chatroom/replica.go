@@ -73,7 +73,7 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.requests = make(map[string]*request)
 	rep.proposals = make(map[string]*proposal)
 	rep.decisions = make(map[uint64]*request)
-	rep.acceptor = newAcceptorState()
+	rep.acceptor = rep.newAcceptorState()
 	rep.failureDetector = newUnreliableFailureDetector(rep)
 	for id := range rep.replicas {
 		// TODO: Just make everyone leaders for now

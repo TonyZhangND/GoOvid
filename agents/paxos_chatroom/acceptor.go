@@ -12,12 +12,12 @@ import (
 type acceptorState struct {
 	ballotNum *ballot
 	accepted  map[uint64]string
-	// accepted is map of slot to
+	// accepted is map of slot to p2aPayload (i.e. string describing pValue)
 	// "<leaderID> <bNum> <slot> <clientID> <reqNum> <m>"
 }
 
 // Constructor
-func newAcceptorState() *acceptorState {
+func (rep *ReplicaAgent) newAcceptorState() *acceptorState {
 	return &acceptorState{}
 }
 
@@ -42,15 +42,17 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 // Handle msg "p2a <leaderID> <balNum> <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleP2a(s string) {
 	sSlice := strings.SplitN(s, " ", 2)
-	leaderID, bNum, slot, _, _, _ := parseP2aPayload(sSlice[1])
-	if rep.acceptor.ballotNum.id == leaderID && rep.acceptor.ballotNum.n == bNum {
+	pval := parseP2aPayload(sSlice[1])
+	if rep.acceptor.ballotNum.id == pval.ballot.id &&
+		rep.acceptor.ballotNum.n == pval.ballot.n {
+		// Accept pVal if I did not promise some higher ballot
 		pValStr := sSlice[1]
-		rep.acceptor.accepted[slot] = pValStr
+		rep.acceptor.accepted[pval.slot] = pValStr
 	}
 	// Respond with "p2b <myID> <ballotNum.id> <ballotNum.n>"
 	response := fmt.Sprintf("p2b %d %d %d",
 		rep.myID,
 		rep.acceptor.ballotNum.id,
 		rep.acceptor.ballotNum.n)
-	rep.send(leaderID, response)
+	rep.send(pval.ballot.id, response)
 }
