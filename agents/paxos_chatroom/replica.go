@@ -172,6 +172,15 @@ func (rep *ReplicaAgent) propose() {
 		delete(rep.requests, k)
 		prop := &proposal{rep.slotIn, req}
 		rep.proposals[prop.hash()] = prop
+		// Send proposal to leaders "propose <slot> <clientID> <reqNum> <m>"
+		for l := range rep.failureDetector.leaders {
+			msg := fmt.Sprintf("propose %d %d %d %s",
+				prop.slot,
+				req.clientID,
+				req.reqNum,
+				req.payload)
+			rep.send(l, msg)
+		}
 		rep.slotIn++
 	}
 }
