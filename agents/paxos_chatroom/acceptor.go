@@ -37,6 +37,7 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 		rep.acceptor.ballotNum.n,
 		m)
 	rep.send(leaderID, response)
+	rep.debugPrintf("Acceptor sent p1b to %d\n", leaderID)
 }
 
 // Handle msg "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"

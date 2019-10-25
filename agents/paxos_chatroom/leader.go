@@ -37,8 +37,7 @@ func (rep *ReplicaAgent) runLeader() {
 	go rep.spawnScout(
 		rep.leader.ballotNum.n,
 		preemptedInChan,
-		adoptedInChan,
-		rep.leader.p1bOutChan)
+		adoptedInChan)
 	for rep.isActive {
 		rep.debugPrintf("Running Leader loop\n")
 		select {
@@ -82,8 +81,7 @@ func (rep *ReplicaAgent) runLeader() {
 			go rep.spawnScout(
 				rep.leader.ballotNum.n,
 				preemptedInChan,
-				adoptedInChan,
-				rep.leader.p1bOutChan)
+				adoptedInChan)
 		}
 	}
 }
@@ -92,10 +90,11 @@ func (rep *ReplicaAgent) runLeader() {
 func (rep *ReplicaAgent) spawnScout(
 	baln uint64,
 	preemptedOutChan chan ballot, // channel into which scout pushes preempted msg
-	adoptedOutChan chan map[uint64]pValue, // channel into which scout pushes adopted msg
-	p1bInChan chan string) {
+	adoptedOutChan chan map[uint64]pValue) { // channel into which scout pushes adopted msg
 
 	rep.leader.p1bOutChan = make(chan string, bufferSize)
+	p1bInChan := rep.leader.p1bOutChan
+	rep.debugPrintf("Read channel %v\n", p1bInChan)
 	rep.debugPrintf("Scout spawned\n")
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
 	myBallot := &ballot{rep.myID, baln}
@@ -109,6 +108,7 @@ func (rep *ReplicaAgent) spawnScout(
 	rep.debugPrintf("Scout entering loop\n")
 	for rep.isActive {
 		payload := <-p1bInChan
+		rep.debugPrintf("JE::LP\n")
 		acc, ballot, pVals := parseP1bPayload(payload)
 		rep.debugPrintf("Scout received p1b from %d\n", acc)
 		if myBallot.eq(ballot) {
@@ -191,7 +191,9 @@ func (rep *ReplicaAgent) spawnCommander(
 
 // Deliver msg "p1b <accID> <ballotNum.id> <ballotNum.n> <json(accepted pvals)>"
 func (rep *ReplicaAgent) handleP1b(request string) {
+	rep.debugPrintf("Write channel %v\n", rep.leader.p1bOutChan)
 	rep.leader.p1bOutChan <- strings.SplitN(request, " ", 2)[1]
+	rep.debugPrintf("Received p1b from %s\n", request)
 }
 
 // Deliver msg "p2b <accID> <slot> <ballotNum.id> <ballotNum.n>" Forward it to the right

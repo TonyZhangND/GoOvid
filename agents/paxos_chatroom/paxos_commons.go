@@ -103,12 +103,13 @@ func parseP1bPayload(s string) (c.ProcessID, *ballot, map[uint64]*pValue) {
 	pVals := make(map[uint64]*pValue)
 
 	// Parse and populate pVals
-	var dat map[float64]interface{}
+	var dat map[string]interface{}
 	if err := json.Unmarshal([]byte(sSlice[3]), &dat); err != nil {
+		fmt.Println("HELP")
 		panic(err)
 	}
 	for k, v := range dat {
-		slot := uint64(k)
+		slot, _ := strconv.ParseUint(k, 10, 64)
 		pVal := parsePValue(v.(string))
 		pVals[slot] = pVal
 	}
