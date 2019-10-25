@@ -49,9 +49,10 @@ func (rep *ReplicaAgent) handleP2a(s string) {
 		pValStr := sSlice[1]
 		rep.acceptor.accepted[pval.slot] = pValStr
 	}
-	// Respond with "p2b <myID> <ballotNum.id> <ballotNum.n>"
-	response := fmt.Sprintf("p2b %d %d %d",
+	// Respond with "p2b <myID> <slot> <ballotNum.id> <ballotNum.n>"
+	response := fmt.Sprintf("p2b %d %d %d %d",
 		rep.myID,
+		pval.slot,
 		rep.acceptor.ballotNum.id,
 		rep.acceptor.ballotNum.n)
 	rep.send(pval.ballot.id, response)

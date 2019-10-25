@@ -100,6 +100,10 @@ func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 			rep.handleP1a(request)
 		case "p2a":
 			rep.handleP2a(request)
+		case "p1b":
+			rep.handleP1b(request)
+		case "p2b":
+			rep.handleP2b(request)
 		default:
 			rep.fatalAgentErrorf("Received invalid msg '%s'\n", request)
 		}
@@ -118,6 +122,7 @@ func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 // Run begins the execution of the paxos agent.
 func (rep *ReplicaAgent) Run() {
 	rep.isActive = true
+	rep.runLeader()
 }
 
 func (rep *ReplicaAgent) handleControllerCommand(r string) {
@@ -147,6 +152,10 @@ func (rep *ReplicaAgent) handleControllerCommand(r string) {
 
 // Handles an incoming client request "<clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleClientRequest(r string) {
+	if _, ok := rep.failureDetector.leaders[rep.myID]; !ok {
+		// ignore request if I am not leader
+		return
+	}
 	reqSlice := strings.SplitN(r, " ", 3)
 	cid, _ := strconv.ParseUint(reqSlice[0], 10, 64)
 	rn, _ := strconv.ParseUint(reqSlice[1], 10, 64)
@@ -172,15 +181,8 @@ func (rep *ReplicaAgent) propose() {
 		delete(rep.requests, k)
 		prop := &proposal{rep.slotIn, req}
 		rep.proposals[prop.hash()] = prop
-		// Send proposal to leaders "propose <slot> <clientID> <reqNum> <m>"
-		for l := range rep.failureDetector.leaders {
-			msg := fmt.Sprintf("propose %d %d %d %s",
-				prop.slot,
-				req.clientID,
-				req.reqNum,
-				req.payload)
-			rep.send(l, msg)
-		}
+		// Forward proposal to leader thread
+		rep.leader.proposeInChan <- *prop
 		rep.slotIn++
 	}
 }
@@ -194,8 +196,11 @@ func (rep *ReplicaAgent) perform(req *request) {
 			return
 		}
 	}
-	// Else execute the request
+	// Else execute the request and perform output commit to client
+	// "committed <clientID> <reqNum>."
 	rep.chatLog = append(rep.chatLog, fmt.Sprintf("%d: %s", req.clientID, req.payload))
+	response := fmt.Sprintf("committed %d %d", req.clientID, req.reqNum)
+	rep.send(req.clientID, response)
 }
 
 // Handles a decision message "decision <slot> <clientID> <reqNum> <m>"
@@ -231,5 +236,8 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 		rep.perform(decToExec)
 		decToExec, ok = rep.decisions[rep.slotOut]
 	}
-	rep.propose()
+	if _, ok := rep.failureDetector.leaders[rep.myID]; ok {
+		// propose() iff I am leader
+		rep.propose()
+	}
 }
