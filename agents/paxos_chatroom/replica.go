@@ -37,7 +37,7 @@ type ReplicaAgent struct {
 	proposals map[string]*proposal // given k->*v, k is a hash of v
 	decisions map[uint64]*request  // map of slot -> decision
 	// failureDetector *unreliableFailureDetector // TODO: currently not in use
-	// acceptor *acceptorState
+	acceptor *acceptorState
 	// leader   *leaderState
 }
 
@@ -73,6 +73,7 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.requests = make(map[string]*request)
 	rep.proposals = make(map[string]*proposal)
 	rep.decisions = make(map[uint64]*request)
+	rep.acceptor = newAcceptorState()
 }
 
 // Halt stops the execution of paxos.
@@ -89,6 +90,10 @@ func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 		switch msgHeader {
 		case "decision":
 			rep.handleClientRequest(request)
+		case "p1a":
+			rep.handleP1a(request)
+		case "p2a":
+			rep.handleP2a(request)
 		default:
 			rep.fatalAgentErrorf("Received invalid msg '%s'\n", request)
 		}

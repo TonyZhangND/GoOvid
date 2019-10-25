@@ -37,8 +37,21 @@ func (p *proposal) hash() string {
 	return fmt.Sprintf("%d : %s", p.slot, p.req.hash())
 }
 
-// // a decision describes a (slot, request) pair
-// type decision struct {
-// 	slot uint64 // slot number
-// 	req  *request
-// }
+type ballot struct {
+	id c.ProcessID
+	n  uint64
+}
+
+// Returns true iff b < other
+func (b *ballot) lt(other *ballot) bool {
+	if b.n == other.n {
+		return b.id < other.id
+	}
+	return b.n < other.n
+}
+
+type pValue struct {
+	ballot *ballot
+	slot   uint64
+	req    *request
+}
