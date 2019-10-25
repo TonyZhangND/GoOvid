@@ -62,7 +62,7 @@ func (clt *ClientAgent) Init(attrs map[string]interface{},
 	}
 	clt.log = attrs["log"].(string)
 
-	// Initialize client statee
+	// Initialize client state
 	clt.nextReqNum = 0
 	clt.reqQueue = make([]*req, 0)
 }
