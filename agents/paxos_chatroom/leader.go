@@ -105,15 +105,12 @@ func (rep *ReplicaAgent) spawnScout(
 		waitfor[acc] = true
 		p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
 		rep.send(acc, p1a)
-		rep.debugPrintf("Scout sent p1a to %d\n", acc)
 	}
-	rep.debugPrintf("Scout entering loop %v\n", rep.isActive)
+	rep.debugPrintf("Scout entering loop\n")
 	for rep.isActive {
-		rep.debugPrintf("Scout in loop\n")
-		rep.debugPrintf("Scout reading p1b\n")
 		payload := <-p1bInChan
-		rep.debugPrintf("Scout read p1b\n")
 		acc, ballot, pVals := parseP1bPayload(payload)
+		rep.debugPrintf("Scout received p1b from %d\n", acc)
 		if myBallot.eq(ballot) {
 			// Adopted :) Now merge pValues from acceptor. For each p in pVals
 			// 1. If p.slot not in rprocessedPVals then processedPVals[p.slot] = p
@@ -194,9 +191,7 @@ func (rep *ReplicaAgent) spawnCommander(
 
 // Deliver msg "p1b <accID> <ballotNum.id> <ballotNum.n> <json(accepted pvals)>"
 func (rep *ReplicaAgent) handleP1b(request string) {
-	rep.debugPrintf("Writing to p1bOutChan\n")
 	rep.leader.p1bOutChan <- strings.SplitN(request, " ", 2)[1]
-	rep.debugPrintf("Done writing to p1bOutChan\n")
 }
 
 // Deliver msg "p2b <accID> <slot> <ballotNum.id> <ballotNum.n>" Forward it to the right

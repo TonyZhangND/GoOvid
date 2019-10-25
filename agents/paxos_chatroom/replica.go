@@ -93,7 +93,6 @@ func (rep *ReplicaAgent) Run() {
 
 // Deliver a message
 func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
-	rep.debugPrintf("Replica %d deliver %s\n", rep.myID, request)
 	switch port {
 	case 1:
 		// Message from another replica
