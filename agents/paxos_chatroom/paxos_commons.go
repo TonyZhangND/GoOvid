@@ -67,7 +67,7 @@ func parseP1aPayload(s string) (c.ProcessID, uint64) {
 	return c.ProcessID(leaderID), bNum
 }
 
-// Parse "<leaderID> <balNum> <slot> <clientID> <reqNum> <m>"
+// Parse "<leaderID> <balNum> <slot> <clientID> <reqNum> <m>" into a pValue
 func parseP2aPayload(s string) *pValue {
 	sSlice := strings.SplitN(s, " ", 6)
 	leaderID, _ := strconv.ParseUint(sSlice[0], 10, 64)
@@ -83,7 +83,8 @@ func parseP2aPayload(s string) *pValue {
 }
 
 // Parse "<accID> <ballotNum.id> <ballotNum.n> <json.Marshal(accepted)>"
-func parseP1bPayload(s string) (c.ProcessID, uint64, uint64, map[uint64]*pValue) {
+// into (accID, ballot, map of slot->pValue)
+func parseP1bPayload(s string) (c.ProcessID, *ballot, map[uint64]*pValue) {
 	sSlice := strings.SplitN(s, " ", 4)
 	accID, _ := strconv.ParseUint(sSlice[0], 10, 64)
 	bID, _ := strconv.ParseUint(sSlice[1], 10, 64)
@@ -100,5 +101,5 @@ func parseP1bPayload(s string) (c.ProcessID, uint64, uint64, map[uint64]*pValue)
 		pVal := parseP2aPayload(v.(string))
 		pVals[slot] = pVal
 	}
-	return c.ProcessID(accID), bID, bn, pVals
+	return c.ProcessID(accID), &ballot{c.ProcessID(bID), bn}, pVals
 }

@@ -38,7 +38,7 @@ type ReplicaAgent struct {
 	decisions       map[uint64]*request        // map of slot -> decision
 	failureDetector *unreliableFailureDetector // TODO: currently only used to mark leaders
 	acceptor        *acceptorState
-	// leader   *leaderState
+	leader          *leaderState
 }
 
 // Init fills the empty kvs struct with this agent's fields and attributes.
@@ -74,6 +74,7 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.proposals = make(map[string]*proposal)
 	rep.decisions = make(map[uint64]*request)
 	rep.acceptor = rep.newAcceptorState()
+	rep.leader = rep.newLeaderState()
 	rep.failureDetector = newUnreliableFailureDetector(rep)
 	for id := range rep.replicas {
 		// TODO: Just make everyone leaders for now
