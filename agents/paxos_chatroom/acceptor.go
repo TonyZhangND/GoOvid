@@ -39,10 +39,10 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 	rep.send(leaderID, response)
 }
 
-// Handle msg "p2a <leaderID> <balNum> <slot> <clientID> <reqNum> <m>"
+// Handle msg "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleP2a(s string) {
 	sSlice := strings.SplitN(s, " ", 2)
-	pval := parseP2aPayload(sSlice[1])
+	pval := parsePValue(sSlice[1])
 	if rep.acceptor.ballotNum.id == pval.ballot.id &&
 		rep.acceptor.ballotNum.n == pval.ballot.n {
 		// Accept pVal if I did not promise some higher ballot

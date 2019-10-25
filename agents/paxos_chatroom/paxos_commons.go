@@ -53,6 +53,11 @@ func (b *ballot) lt(other *ballot) bool {
 	return b.n < other.n
 }
 
+// Returns true iff b = other
+func (b *ballot) eq(other *ballot) bool {
+	return b.n == other.n && b.id == other.id
+}
+
 type pValue struct {
 	ballot *ballot
 	slot   uint64
@@ -68,7 +73,7 @@ func parseP1aPayload(s string) (c.ProcessID, uint64) {
 }
 
 // Parse "<leaderID> <balNum> <slot> <clientID> <reqNum> <m>" into a pValue
-func parseP2aPayload(s string) *pValue {
+func parsePValue(s string) *pValue {
 	sSlice := strings.SplitN(s, " ", 6)
 	leaderID, _ := strconv.ParseUint(sSlice[0], 10, 64)
 	bNum, _ := strconv.ParseUint(sSlice[1], 10, 64)
@@ -98,8 +103,18 @@ func parseP1bPayload(s string) (c.ProcessID, *ballot, map[uint64]*pValue) {
 	}
 	for k, v := range dat {
 		slot := uint64(k)
-		pVal := parseP2aPayload(v.(string))
+		pVal := parsePValue(v.(string))
 		pVals[slot] = pVal
 	}
 	return c.ProcessID(accID), &ballot{c.ProcessID(bID), bn}, pVals
+}
+
+// Parse "<accID> <ballotNum.id> <ballotNum.n>"
+// into (accID, ballot)
+func parseP2bPayload(s string) (c.ProcessID, *ballot) {
+	sSlice := strings.SplitN(s, " ", 3)
+	accID, _ := strconv.ParseUint(sSlice[0], 10, 64)
+	bID, _ := strconv.ParseUint(sSlice[1], 10, 64)
+	bn, _ := strconv.ParseUint(sSlice[2], 10, 64)
+	return c.ProcessID(accID), &ballot{c.ProcessID(bID), bn}
 }

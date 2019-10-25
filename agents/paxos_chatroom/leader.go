@@ -15,9 +15,6 @@ type leaderState struct {
 	active    bool
 	proposals map[string]*proposal // given k->*v, k is a hash of v
 	propose   chan proposal
-	adopted   chan adoptedPayload
-	preempted chan ballot
-	p1bChan   chan string // channel to push p1b messages to scout
 }
 
 // Payload for "adopted" messages from scout to leader
@@ -32,13 +29,16 @@ func (rep *ReplicaAgent) newLeaderState() *leaderState {
 		ballotNum: &ballot{rep.myID, 0},
 		active:    false,
 		proposals: make(map[string]*proposal),
-		propose:   make(chan proposal),
-		adopted:   make(chan adoptedPayload),
-		preempted: make(chan ballot)}
+		propose:   make(chan proposal)}
 }
 
 // Scout process in Fig 6 of PMMC
-func (rep *ReplicaAgent) spawnScout(baln uint64, p1bChan chan string) {
+func (rep *ReplicaAgent) spawnScout(
+	baln uint64,
+	preempted chan ballot,
+	adopted chan adoptedPayload,
+	p1bChan chan string) {
+
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
 	myBallot := &ballot{rep.myID, baln}
 	processedPVals := make(map[uint64]pValue)
@@ -51,7 +51,7 @@ func (rep *ReplicaAgent) spawnScout(baln uint64, p1bChan chan string) {
 	for rep.isActive {
 		payload := <-p1bChan
 		acc, ballot, pVals := parseP1bPayload(payload)
-		if myBallot.id == ballot.id && myBallot.n == ballot.n {
+		if myBallot.eq(ballot) {
 			// Adopted :) Now merge pValues from acceptor. For each p in pVals
 			// 1. If p.slot not in rprocessedPVals then processedPVals[p.slot] = p
 			// 2. Else, if processedPVals[p.slot].ballot.lt(p.ballot) then
@@ -69,12 +69,58 @@ func (rep *ReplicaAgent) spawnScout(baln uint64, p1bChan chan string) {
 			delete(waitfor, acc)
 			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				a := adoptedPayload{*myBallot, processedPVals}
-				rep.leader.adopted <- a
+				adopted <- a
 				return
 			}
 		} else {
 			// Pre-empted :(
-			rep.leader.preempted <- *ballot
+			preempted <- *ballot
+			return
+		}
+	}
+}
+
+// Commander process in Fig 6 of PMMC
+func (rep *ReplicaAgent) spawnCommander(
+	pval *pValue, preempted chan ballot,
+	p2bChan chan string) {
+
+	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p2b is pending
+	myBallot := pval.ballot
+
+	for acc := range rep.replicas {
+		// Send "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
+		waitfor[acc] = true
+		p2a := fmt.Sprintf("p2a %d %d %d %d %d %s",
+			myBallot.id,
+			myBallot.n,
+			pval.slot,
+			pval.req.clientID,
+			pval.req.reqNum,
+			pval.req.payload)
+		rep.send(acc, p2a)
+	}
+	for rep.isActive {
+		payload := <-p2bChan
+		acc, ballot := parseP2bPayload(payload)
+		if myBallot.eq(ballot) {
+			// Accepted :)
+			delete(waitfor, acc)
+			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
+				// pVal is chosen. Broadcast "decision <slot> <clientID> <reqNum> <m>"
+				msg := fmt.Sprintf("decision %d %d %d %s",
+					pval.slot,
+					pval.req.clientID,
+					pval.req.reqNum,
+					pval.req.payload)
+				for learner := range rep.replicas {
+					rep.send(learner, msg)
+				}
+				return
+			}
+		} else {
+			// Pre-empted :(
+			preempted <- *ballot
 			return
 		}
 	}
