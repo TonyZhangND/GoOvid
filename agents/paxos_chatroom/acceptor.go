@@ -18,7 +18,7 @@ type acceptorState struct {
 
 // Constructor
 func (rep *ReplicaAgent) newAcceptorState() *acceptorState {
-	return &acceptorState{}
+	return &acceptorState{accepted: make(map[uint64]string)}
 }
 
 // Handle msg "p1a <sender> <balNum>"
@@ -36,7 +36,9 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 		rep.acceptor.ballotNum.id,
 		rep.acceptor.ballotNum.n,
 		m)
+	rep.debugPrintf("sending p1b to %d\n", leaderID)
 	rep.send(leaderID, response)
+	rep.debugPrintf("sent p1b to %d\n", leaderID)
 }
 
 // Handle msg "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"

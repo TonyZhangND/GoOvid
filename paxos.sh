@@ -30,8 +30,11 @@ then
 fi
 
 
-echo "Killing all running instances..."
+echo "Killing all running instances and cleaning directory..."
 ./killall.sh  >/dev/null 2>&1
+rm -f nohup.out
+rm tmp/box*.log
+rm tmp/replica*.output
 
 echo "Generating new configuration with"
 echo "f=$f, nclients=$nclients, mode=$mode, networkloss=$loss"
@@ -57,7 +60,7 @@ do
     let port=8000+$clientID
     box="127.0.0.1:$port"
     let clientID++
-    nohup ./ovid -log configs/paxos.json $box &
+    nohup ./ovid -debug configs/paxos.json $box &
 done
 disown
 

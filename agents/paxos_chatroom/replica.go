@@ -85,15 +85,22 @@ func (rep *ReplicaAgent) Halt() {
 	rep.isActive = false
 }
 
+// Run begins the execution of the paxos agent.
+func (rep *ReplicaAgent) Run() {
+	rep.isActive = true
+	rep.runLeader()
+}
+
 // Deliver a message
 func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
+	rep.debugPrintf("Replica %d deliver %s\n", rep.myID, request)
 	switch port {
 	case 1:
 		// Message from another replica
 		msgHeader := strings.SplitN(request, " ", 2)[0]
 		switch msgHeader {
 		case "decision":
-			rep.handleClientRequest(request)
+			rep.handleDecision(request)
 		case "p1a":
 			rep.handleP1a(request)
 		case "p2a":
@@ -115,12 +122,6 @@ func (rep *ReplicaAgent) Deliver(request string, port c.PortNum) {
 	default:
 		rep.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
 	}
-}
-
-// Run begins the execution of the paxos agent.
-func (rep *ReplicaAgent) Run() {
-	rep.isActive = true
-	rep.runLeader()
 }
 
 func (rep *ReplicaAgent) handleControllerCommand(r string) {

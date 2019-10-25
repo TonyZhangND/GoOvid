@@ -40,11 +40,12 @@ func (rep *ReplicaAgent) runLeader() {
 		adoptedInChan,
 		rep.leader.p1bOutChan)
 	for rep.isActive {
+		rep.debugPrintf("Running Leader loop\n")
 		select {
 		case prop := <-rep.leader.proposeInChan:
 			// Handle Propose
 			if _, ok := rep.leader.proposals[prop.slot]; !ok {
-				// If slot not alreay used
+				// If slot not already used
 				rep.leader.proposals[prop.slot] = &prop
 				if rep.leader.active {
 					cmdP2bOutChan := make(chan string)
@@ -56,25 +57,28 @@ func (rep *ReplicaAgent) runLeader() {
 		case pmax := <-adoptedInChan:
 			// Handle Adopted
 			// pmax is a map of slot->pValue with highest ballot accepted
+			rep.debugPrintf("I am leader\n")
 			for slot, highestAcceptedPVal := range pmax {
 				rep.leader.proposals[slot].req = highestAcceptedPVal.req
 			}
 			// Spawn commanders for each pval
 			for _, prop := range rep.leader.proposals {
-				cmdP2bOutChan := make(chan string)
+				cmdP2bOutChan := make(chan string, bufferSize)
 				rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
 				pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
 				go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
 			}
 			rep.leader.active = true
-		case ballot := <-preemptedInChan:
+		case bal := <-preemptedInChan:
 			// Handle Pre-empted
 			// Update my ballot number and spawn scout
-			if rep.leader.ballotNum.lt(&ballot) {
+			if rep.leader.ballotNum.lt(&bal) {
 				rep.leader.active = false
-				rep.leader.ballotNum.n = ballot.n + 1
+				rep.leader.ballotNum.n = bal.n + 1
 			}
 			time.Sleep(timeoutDuration * 4)
+			preemptedInChan = make(chan ballot)          // channel into which scout/cmdr pushes preempted msg
+			adoptedInChan = make(chan map[uint64]pValue) // channel into which scout pushes adopted msg
 			go rep.spawnScout(
 				rep.leader.ballotNum.n,
 				preemptedInChan,
@@ -91,6 +95,8 @@ func (rep *ReplicaAgent) spawnScout(
 	adoptedOutChan chan map[uint64]pValue, // channel into which scout pushes adopted msg
 	p1bInChan chan string) {
 
+	rep.leader.p1bOutChan = make(chan string, bufferSize)
+	rep.debugPrintf("Scout spawned\n")
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
 	myBallot := &ballot{rep.myID, baln}
 	processedPVals := make(map[uint64]pValue)
@@ -99,9 +105,14 @@ func (rep *ReplicaAgent) spawnScout(
 		waitfor[acc] = true
 		p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
 		rep.send(acc, p1a)
+		rep.debugPrintf("Scout sent p1a to %d\n", acc)
 	}
+	rep.debugPrintf("Scout entering loop %v\n", rep.isActive)
 	for rep.isActive {
+		rep.debugPrintf("Scout in loop\n")
+		rep.debugPrintf("Scout reading p1b\n")
 		payload := <-p1bInChan
+		rep.debugPrintf("Scout read p1b\n")
 		acc, ballot, pVals := parseP1bPayload(payload)
 		if myBallot.eq(ballot) {
 			// Adopted :) Now merge pValues from acceptor. For each p in pVals
@@ -121,11 +132,13 @@ func (rep *ReplicaAgent) spawnScout(
 			delete(waitfor, acc)
 			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				adoptedOutChan <- processedPVals
+				rep.debugPrintf("Scout killed - adopted\n")
 				return
 			}
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
+			rep.debugPrintf("Scout killed - preempted\n")
 			return
 		}
 	}
@@ -137,7 +150,8 @@ func (rep *ReplicaAgent) spawnCommander(
 	preemptedOutChan chan ballot,
 	p2bInChan chan string) {
 
-	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p2b is pending
+	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
+	waitfor := make(map[c.ProcessID]bool)                 // set of acceptors from which p2b is pending
 	myBallot := pval.ballot
 
 	for acc := range rep.replicas {
@@ -180,7 +194,9 @@ func (rep *ReplicaAgent) spawnCommander(
 
 // Deliver msg "p1b <accID> <ballotNum.id> <ballotNum.n> <json(accepted pvals)>"
 func (rep *ReplicaAgent) handleP1b(request string) {
+	rep.debugPrintf("Writing to p1bOutChan\n")
 	rep.leader.p1bOutChan <- strings.SplitN(request, " ", 2)[1]
+	rep.debugPrintf("Done writing to p1bOutChan\n")
 }
 
 // Deliver msg "p2b <accID> <slot> <ballotNum.id> <ballotNum.n>" Forward it to the right

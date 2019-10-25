@@ -15,6 +15,7 @@ const (
 	pingInterval    = 100 * time.Microsecond
 	sleepDuration   = 100 * time.Millisecond
 	timeoutDuration = 1000 * time.Millisecond
+	bufferSize      = 10000
 )
 
 var wg sync.WaitGroup
