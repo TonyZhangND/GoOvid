@@ -30,14 +30,14 @@ type ReplicaAgent struct {
 	log      string // TODO: This doesn't do anything now
 
 	// Replica state
-	chatLog   []string // application state
-	slotIn    uint64
-	slotOut   uint64
-	requests  map[string]*request  // given k->*v, k is a hash of v
-	proposals map[string]*proposal // given k->*v, k is a hash of v
-	decisions map[uint64]*request  // map of slot -> decision
-	// failureDetector *unreliableFailureDetector // TODO: currently not in use
-	acceptor *acceptorState
+	chatLog         []string // application state
+	slotIn          uint64
+	slotOut         uint64
+	requests        map[string]*request        // given k->*v, k is a hash of v
+	proposals       map[string]*proposal       // given k->*v, k is a hash of v
+	decisions       map[uint64]*request        // map of slot -> decision
+	failureDetector *unreliableFailureDetector // TODO: currently only used to mark leaders
+	acceptor        *acceptorState
 	// leader   *leaderState
 }
 
@@ -74,6 +74,11 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.proposals = make(map[string]*proposal)
 	rep.decisions = make(map[uint64]*request)
 	rep.acceptor = newAcceptorState()
+	rep.failureDetector = newUnreliableFailureDetector(rep)
+	for id := range rep.replicas {
+		// TODO: Just make everyone leaders for now
+		rep.failureDetector.leaders[id] = true
+	}
 }
 
 // Halt stops the execution of paxos.
