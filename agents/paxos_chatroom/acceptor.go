@@ -3,10 +3,7 @@ package paxos
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
-
-	c "github.com/TonyZhangND/GoOvid/commons"
 )
 
 // This file describes the states and transitions of a paxos replica that is related
@@ -16,7 +13,7 @@ type acceptorState struct {
 	ballotNum *ballot
 	accepted  map[uint64]string
 	// accepted is map of slot to
-	// "<repID> <bNum> <slot> <clientID> <reqNum> <m>"
+	// "<leaderID> <bNum> <slot> <clientID> <reqNum> <m>"
 }
 
 // Constructor
@@ -26,10 +23,9 @@ func newAcceptorState() *acceptorState {
 
 // Handle msg "p1a <sender> <balNum>"
 func (rep *ReplicaAgent) handleP1a(s string) {
-	sSlice := strings.SplitN(s, " ", 3)
-	leaderID, _ := strconv.ParseUint(sSlice[1], 10, 64)
-	bNum, _ := strconv.ParseUint(sSlice[2], 10, 64)
-	newBallot := &ballot{c.ProcessID(leaderID), bNum}
+	payload := strings.SplitN(s, " ", 2)[1]
+	leaderID, bNum := parseP1aPayload(payload)
+	newBallot := &ballot{leaderID, bNum}
 	if rep.acceptor.ballotNum == nil || rep.acceptor.ballotNum.lt(newBallot) {
 		rep.acceptor.ballotNum = newBallot
 	}
@@ -40,10 +36,21 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 		rep.acceptor.ballotNum.id,
 		rep.acceptor.ballotNum.n,
 		m)
-	rep.send(c.ProcessID(leaderID), response)
+	rep.send(leaderID, response)
 }
 
-// p2a "<sender> <balNum> <slot> <clientID> <reqNum> <m>"
+// Handle msg "p2a <leaderID> <balNum> <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleP2a(s string) {
-
+	sSlice := strings.SplitN(s, " ", 2)
+	leaderID, bNum, slot, _, _, _ := parseP2aPayload(sSlice[1])
+	if rep.acceptor.ballotNum.id == leaderID && rep.acceptor.ballotNum.n == bNum {
+		pValStr := sSlice[1]
+		rep.acceptor.accepted[slot] = pValStr
+	}
+	// Respond with "p2b <myID> <ballotNum.id> <ballotNum.n>"
+	response := fmt.Sprintf("p2b %d %d %d",
+		rep.myID,
+		rep.acceptor.ballotNum.id,
+		rep.acceptor.ballotNum.n)
+	rep.send(leaderID, response)
 }

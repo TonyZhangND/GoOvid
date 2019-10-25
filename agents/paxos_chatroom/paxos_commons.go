@@ -2,6 +2,8 @@ package paxos
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,4 +56,24 @@ type pValue struct {
 	ballot *ballot
 	slot   uint64
 	req    *request
+}
+
+// Parse "<sender> <balNum>" and return sender, balNum
+func parseP1aPayload(s string) (c.ProcessID, uint64) {
+	sSlice := strings.SplitN(s, " ", 2)
+	leaderID, _ := strconv.ParseUint(sSlice[0], 10, 64)
+	bNum, _ := strconv.ParseUint(sSlice[1], 10, 64)
+	return c.ProcessID(leaderID), bNum
+}
+
+// Parse "<leaderID> <balNum> <slot> <clientID> <reqNum> <m>"
+func parseP2aPayload(s string) (c.ProcessID, uint64, uint64, c.ProcessID, uint64, string) {
+	sSlice := strings.SplitN(s, " ", 6)
+	leaderID, _ := strconv.ParseUint(sSlice[0], 10, 64)
+	bNum, _ := strconv.ParseUint(sSlice[1], 10, 64)
+	slot, _ := strconv.ParseUint(sSlice[2], 10, 64)
+	clientID, _ := strconv.ParseUint(sSlice[3], 10, 64)
+	reqNum, _ := strconv.ParseUint(sSlice[4], 10, 64)
+	m := sSlice[5]
+	return c.ProcessID(leaderID), bNum, slot, c.ProcessID(clientID), reqNum, m
 }
