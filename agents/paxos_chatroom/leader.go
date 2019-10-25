@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
@@ -73,6 +74,7 @@ func (rep *ReplicaAgent) runLeader() {
 				rep.leader.active = false
 				rep.leader.ballotNum.n = ballot.n + 1
 			}
+			time.Sleep(timeoutDuration * 4)
 			go rep.spawnScout(
 				rep.leader.ballotNum.n,
 				preemptedInChan,

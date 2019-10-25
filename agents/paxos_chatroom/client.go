@@ -24,7 +24,6 @@ type ClientAgent struct {
 	myID     c.ProcessID
 	replicas map[c.ProcessID]int
 	mode     string // script or manual modes
-	log      string // TODO: This doesn't do anything now
 
 	// Client state
 	nextReqNum uint64
@@ -60,7 +59,6 @@ func (clt *ClientAgent) Init(attrs map[string]interface{},
 	if clt.mode != "script" && clt.mode != "manual" {
 		clt.fatalAgentErrorf("Invalid mode '%s'\n", clt.mode)
 	}
-	clt.log = attrs["log"].(string)
 
 	// Initialize client state
 	clt.nextReqNum = 0

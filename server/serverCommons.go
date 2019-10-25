@@ -4,6 +4,7 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime/debug"
 	"time"
@@ -17,11 +18,27 @@ const basePort c.PortNum = 3000
 // DebugMode turns on debugging print statements when true
 var DebugMode = false
 
+// LogFile turns on logging when initialized
+var LogFile = ""
+
 // DebugPrintln prints the string s if debug mode is on
 func debugPrintf(s string, a ...interface{}) {
 	if DebugMode {
 		errMsg := fmt.Sprintf(s, a...)
 		fmt.Printf("Box %v : %s", myBoxID, errMsg)
+	}
+	if len(LogFile) > 0 {
+		f, err := os.OpenFile(LogFile,
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println(err)
+		}
+		defer f.Close()
+		errMsg := fmt.Sprintf(s, a...)
+		s := fmt.Sprintf("Box %v : %s", myBoxID, errMsg)
+		if _, err := f.WriteString(s); err != nil {
+			log.Println(err)
+		}
 	}
 }
 

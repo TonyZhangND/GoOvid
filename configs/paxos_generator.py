@@ -62,13 +62,12 @@ def print_agents(agents):
     print("}")
 
 
-def generate(f, num_clients, client_mode, log_mode):
+def generate(f, num_clients, client_mode):
     """
     Generates and prints a Paxos configuration to stdout
     :param f: Number of replica failures the paxos configuration tolerates
     :num_cliends: Number of client agents desired in the configuration
     :client_mode: Is this client in 'manual' or 'script' mode
-    :log_mode: Should agents log their actions
     """
     assert f > 0 
     assert num_clients > 0
@@ -90,14 +89,10 @@ def generate(f, num_clients, client_mode, log_mode):
             agent.attrs["replicas"] = replicas
             agent.attrs["clients"] = clients
             agent.attrs["output"] = f"tmp/replica_{agent.id}.output"
-            if log_mode:
-                agent.attrs["log"] = f"tmp/replica_{agent.id}.log"
         else:  # agent.kind == 'client
             agent.attrs["myid"] = agent.id
             agent.attrs["replicas"] = replicas
             agent.attrs["mode"] = client_mode
-            if log_mode:
-                agent.attrs["log"] = f"tmp/client_{agent.id}.log"
 
     # Populate agent routing tables
     for agent in agents:
@@ -127,5 +122,4 @@ if __name__ == '__main__':
     f = int(sys.argv[1])
     num_clients = int(sys.argv[2])
     client_mode = sys.argv[3] 
-    log_mode = True   # TODO: default to true for now
-    generate(f, num_clients, client_mode, log_mode)
+    generate(f, num_clients, client_mode)

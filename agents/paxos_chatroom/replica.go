@@ -27,7 +27,6 @@ type ReplicaAgent struct {
 	clients  map[c.ProcessID]int
 	mode     string // script or manual modes
 	output   string // path to output file for 'dump' command
-	log      string // TODO: This doesn't do anything now
 
 	// Replica state
 	chatLog         []string // application state
@@ -63,7 +62,6 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 		id := c.ProcessID(x.(float64))
 		rep.clients[id] = 0
 	}
-	rep.log = attrs["log"].(string)
 	rep.output = attrs["output"].(string)
 
 	// Initialize replica state

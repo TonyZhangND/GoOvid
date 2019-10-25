@@ -23,6 +23,7 @@ func main() {
 	// process command line arguments and parse config
 	masterPort := flag.Int("master", 0, "Local port number for master connection")
 	debugMode := flag.Bool("debug", false, "Toggles debugMode to on")
+	logMode := flag.Bool("log", false, "Toggles logMode to on")
 	loss := flag.Float64("loss", 0, "Rate at which a server drops inter-agent messages")
 	flag.Parse()
 	config := flag.Args()[0]
@@ -40,6 +41,9 @@ func main() {
 		if agent.Box == myBox {
 			if *debugMode {
 				serv.DebugMode = true
+			}
+			if *logMode {
+				serv.LogFile = fmt.Sprintf("tmp/box_%v.log", myBox)
 			}
 			serv.InitAndRunServer(myBox, agentMap, mp, *loss)
 			return
