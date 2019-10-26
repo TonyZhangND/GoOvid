@@ -32,8 +32,9 @@ func (rep *ReplicaAgent) newLeaderState() *leaderState {
 
 // Start running leader thread described in Fig 7 of PMMC
 func (rep *ReplicaAgent) runLeader() {
-	preemptedInChan := make(chan ballot)          // channel into which scout/cmdr pushes preempted msg
-	adoptedInChan := make(chan map[uint64]pValue) // channel into which scout pushes adopted msg
+	preemptedInChan := make(chan ballot)                  // channel into which scout/cmdr pushes preempted msg
+	adoptedInChan := make(chan map[uint64]pValue)         // channel into which scout pushes adopted msg
+	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
 	go rep.spawnScout(
 		rep.leader.ballotNum.n,
 		preemptedInChan,
@@ -72,12 +73,14 @@ func (rep *ReplicaAgent) runLeader() {
 			// Handle Pre-empted
 			// Update my ballot number and spawn scout
 			if rep.leader.ballotNum.lt(&bal) {
+				rep.debugPrintf("Pre-empted. No longer leader")
 				rep.leader.active = false
 				rep.leader.ballotNum.n = bal.n + 1
 			}
 			time.Sleep(timeoutDuration * 4)
-			preemptedInChan = make(chan ballot)          // channel into which scout/cmdr pushes preempted msg
-			adoptedInChan = make(chan map[uint64]pValue) // channel into which scout pushes adopted msg
+			rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
+			preemptedInChan = make(chan ballot)                   // channel into which scout/cmdr pushes preempted msg
+			adoptedInChan = make(chan map[uint64]pValue)          // channel into which scout pushes adopted msg
 			go rep.spawnScout(
 				rep.leader.ballotNum.n,
 				preemptedInChan,
@@ -108,7 +111,6 @@ func (rep *ReplicaAgent) spawnScout(
 	rep.debugPrintf("Scout entering loop\n")
 	for rep.isActive {
 		payload := <-p1bInChan
-		rep.debugPrintf("JE::LP\n")
 		acc, ballot, pVals := parseP1bPayload(payload)
 		rep.debugPrintf("Scout received p1b from %d\n", acc)
 		if myBallot.eq(ballot) {
@@ -147,8 +149,7 @@ func (rep *ReplicaAgent) spawnCommander(
 	preemptedOutChan chan ballot,
 	p2bInChan chan string) {
 
-	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
-	waitfor := make(map[c.ProcessID]bool)                 // set of acceptors from which p2b is pending
+	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p2b is pending
 	myBallot := pval.ballot
 
 	for acc := range rep.replicas {
