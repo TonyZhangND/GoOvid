@@ -32,9 +32,8 @@ func (rep *ReplicaAgent) newLeaderState() *leaderState {
 
 // Start running leader thread described in Fig 7 of PMMC
 func (rep *ReplicaAgent) runLeader() {
-	preemptedInChan := make(chan ballot)                  // channel into which scout/cmdr pushes preempted msg
-	adoptedInChan := make(chan map[uint64]pValue)         // channel into which scout pushes adopted msg
-	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
+	preemptedInChan := make(chan ballot, bufferSize)          // channel into which scout/cmdr pushes preempted msg
+	adoptedInChan := make(chan map[uint64]pValue, bufferSize) // channel into which scout pushes adopted msg
 	go rep.spawnScout(
 		rep.leader.ballotNum.n,
 		preemptedInChan,
@@ -43,6 +42,7 @@ func (rep *ReplicaAgent) runLeader() {
 		rep.debugPrintf("Running Leader loop\n")
 		select {
 		case prop := <-rep.leader.proposeInChan:
+			rep.debugPrintf("Leader received proposal {slot: %d, client: %d, '%s'}\n", prop.slot, prop.req.clientID, prop.req.payload)
 			// Handle Propose
 			if _, ok := rep.leader.proposals[prop.slot]; !ok {
 				// If slot not already used
@@ -57,7 +57,7 @@ func (rep *ReplicaAgent) runLeader() {
 		case pmax := <-adoptedInChan:
 			// Handle Adopted
 			// pmax is a map of slot->pValue with highest ballot accepted
-			rep.debugPrintf("I am leader\n")
+			rep.debugPrintf("Leader adopted with ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
 			for slot, highestAcceptedPVal := range pmax {
 				rep.leader.proposals[slot].req = highestAcceptedPVal.req
 			}
@@ -71,16 +71,18 @@ func (rep *ReplicaAgent) runLeader() {
 			rep.leader.active = true
 		case bal := <-preemptedInChan:
 			// Handle Pre-empted
+			rep.debugPrintf("Leader preempted with ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
+
 			// Update my ballot number and spawn scout
 			if rep.leader.ballotNum.lt(&bal) {
-				rep.debugPrintf("Pre-empted. No longer leader")
 				rep.leader.active = false
 				rep.leader.ballotNum.n = bal.n + 1
 			}
+			rep.debugPrintf("New ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
 			time.Sleep(timeoutDuration * 4)
-			rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
-			preemptedInChan = make(chan ballot)                   // channel into which scout/cmdr pushes preempted msg
-			adoptedInChan = make(chan map[uint64]pValue)          // channel into which scout pushes adopted msg
+			rep.leader.p2bOutChans = make(map[uint64]chan string)    // start a new set of channels
+			preemptedInChan = make(chan ballot, bufferSize)          // channel into which scout/cmdr pushes preempted msg
+			adoptedInChan = make(chan map[uint64]pValue, bufferSize) // channel into which scout pushes adopted msg
 			go rep.spawnScout(
 				rep.leader.ballotNum.n,
 				preemptedInChan,
@@ -95,10 +97,10 @@ func (rep *ReplicaAgent) spawnScout(
 	preemptedOutChan chan ballot, // channel into which scout pushes preempted msg
 	adoptedOutChan chan map[uint64]pValue) { // channel into which scout pushes adopted msg
 
+	rep.debugPrintf("Scout spawned for ballot{%d, %d}\n", rep.myID, baln)
 	rep.leader.p1bOutChan = make(chan string, bufferSize)
+	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
 	p1bInChan := rep.leader.p1bOutChan
-	rep.debugPrintf("Read channel %v\n", p1bInChan)
-	rep.debugPrintf("Scout spawned\n")
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
 	myBallot := &ballot{rep.myID, baln}
 	processedPVals := make(map[uint64]pValue)
@@ -108,11 +110,9 @@ func (rep *ReplicaAgent) spawnScout(
 		p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
 		rep.send(acc, p1a)
 	}
-	rep.debugPrintf("Scout entering loop\n")
 	for rep.isActive {
 		payload := <-p1bInChan
 		acc, ballot, pVals := parseP1bPayload(payload)
-		rep.debugPrintf("Scout received p1b from %d\n", acc)
 		if myBallot.eq(ballot) {
 			// Adopted :) Now merge pValues from acceptor. For each p in pVals
 			// 1. If p.slot not in rprocessedPVals then processedPVals[p.slot] = p
@@ -131,13 +131,13 @@ func (rep *ReplicaAgent) spawnScout(
 			delete(waitfor, acc)
 			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				adoptedOutChan <- processedPVals
-				rep.debugPrintf("Scout killed - adopted\n")
+				rep.debugPrintf("Scout {%d, %d} killed - adopted\n", rep.myID, baln)
 				return
 			}
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
-			rep.debugPrintf("Scout killed - preempted\n")
+			rep.debugPrintf("Scout {%d, %d} killed - preempted\n", rep.myID, baln)
 			return
 		}
 	}
@@ -148,6 +148,8 @@ func (rep *ReplicaAgent) spawnCommander(
 	pval *pValue,
 	preemptedOutChan chan ballot,
 	p2bInChan chan string) {
+
+	rep.debugPrintf("Commander spawned for pval = {%v, %d, '%s'}\n", *pval.ballot, pval.slot, pval.req.payload)
 
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p2b is pending
 	myBallot := pval.ballot
@@ -164,6 +166,7 @@ func (rep *ReplicaAgent) spawnCommander(
 			pval.req.payload)
 		rep.send(acc, p2a)
 	}
+	rep.debugPrintf("Commander {%v, %d, '%s'} sent p2a to all\n", *pval.ballot, pval.slot, pval.req.payload)
 	for rep.isActive {
 		payload := <-p2bInChan
 		acc, _, ballot := parseP2bPayload(payload)
@@ -185,6 +188,7 @@ func (rep *ReplicaAgent) spawnCommander(
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
+			rep.debugPrintf("Commander for pval = {%v, %s, %s} preempted. No longer leader\n", pval.ballot, pval.slot, pval.req.payload)
 			return
 		}
 	}
@@ -192,9 +196,7 @@ func (rep *ReplicaAgent) spawnCommander(
 
 // Deliver msg "p1b <accID> <ballotNum.id> <ballotNum.n> <json(accepted pvals)>"
 func (rep *ReplicaAgent) handleP1b(request string) {
-	rep.debugPrintf("Write channel %v\n", rep.leader.p1bOutChan)
 	rep.leader.p1bOutChan <- strings.SplitN(request, " ", 2)[1]
-	rep.debugPrintf("Received p1b from %s\n", request)
 }
 
 // Deliver msg "p2b <accID> <slot> <ballotNum.id> <ballotNum.n>" Forward it to the right
