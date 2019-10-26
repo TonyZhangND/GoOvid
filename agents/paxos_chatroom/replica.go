@@ -227,9 +227,9 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 			if prop.slot == rep.slotOut {
 				// If slotOut used for a command in rep.proposals
 				delete(rep.proposals, k)
-				if prop.hash() != decToExec.hash() {
+				if prop.req.hash() != decToExec.hash() {
 					// If req removed from rep.proposals is not decToExec
-					rep.debugPrintf("NONONO %s != %s\n", prop.hash(), decToExec.hash())
+					rep.debugPrintf("NONONO '%s' != '%s'\n", prop.hash(), decToExec.hash())
 					rep.requests[prop.hash()] = prop.req
 				}
 				break // No need to keep searching
