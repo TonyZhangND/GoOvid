@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
 )
@@ -29,12 +30,17 @@ type ReplicaAgent struct {
 	output   string // path to output file for 'dump' command
 
 	// Replica state
-	chatLog         []string // application state
-	slotIn          uint64
-	slotOut         uint64
-	requests        map[string]*request        // given k->*v, k is a hash of v
-	proposals       map[string]*proposal       // given k->*v, k is a hash of v
-	decisions       map[uint64]*request        // map of slot -> decision
+	chatLog   []string // application state
+	slotIn    uint64
+	slotOut   uint64
+	requests  map[string]*request  // given k->*v, k is a hash of v
+	proposals map[string]*proposal // given k->*v, k is a hash of v
+	decisions map[uint64]*request  // map of slot -> decision
+
+	rmut *sync.RWMutex // mutex for requests map
+	pmut *sync.RWMutex // mutex for proposals map
+	dmut *sync.RWMutex //mutex for decisions map
+
 	failureDetector *unreliableFailureDetector // TODO: currently only used to mark leaders
 	acceptor        *acceptorState
 	leader          *leaderState
@@ -71,6 +77,9 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 	rep.requests = make(map[string]*request)
 	rep.proposals = make(map[string]*proposal)
 	rep.decisions = make(map[uint64]*request)
+	rep.rmut = new(sync.RWMutex) // mutex for requests map
+	rep.pmut = new(sync.RWMutex) // mutex for requests map
+	rep.dmut = new(sync.RWMutex) // mutex for requests map
 	rep.acceptor = rep.newAcceptorState()
 	rep.leader = rep.newLeaderState()
 	rep.failureDetector = newUnreliableFailureDetector(rep)
@@ -170,10 +179,14 @@ func (rep *ReplicaAgent) propose() {
 	for k, req := range rep.requests {
 		// For each req in rep.requests, start proposing it for each slot
 		// that I have not proposed a value nor learned a decision
+		rep.dmut.RLock()
 		_, slotTaken := rep.decisions[rep.slotIn]
+		rep.dmut.RUnlock()
 		for slotTaken {
 			rep.slotIn++
+			rep.dmut.RLock()
 			_, slotTaken = rep.decisions[rep.slotIn]
+			rep.dmut.RUnlock()
 		}
 		// Found an empty slot
 		delete(rep.requests, k)
@@ -187,13 +200,16 @@ func (rep *ReplicaAgent) propose() {
 
 // Perform method in Fig 1 of PMMC
 func (rep *ReplicaAgent) perform(req *request) {
+	rep.dmut.RLock()
 	for s, dec := range rep.decisions {
 		// If req has been previously committed, ignore it
 		if s < rep.slotOut && dec.hash() == req.hash() {
 			rep.slotOut++
+			rep.dmut.RUnlock()
 			return
 		}
 	}
+	rep.dmut.RUnlock()
 	// Else execute the request and perform output commit to client
 	// "committed <clientID> <reqNum>."
 	rep.chatLog = append(rep.chatLog, fmt.Sprintf("%d: %s", req.clientID, req.payload))
@@ -214,10 +230,14 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 	reqNum, _ := strconv.ParseUint(dSlice[3], 10, 64)
 	m := dSlice[4]
 	newDec := &request{cid, reqNum, m}
+	rep.dmut.Lock()
 	rep.decisions[slot] = newDec
+	rep.dmut.Unlock()
 
 	// Execute all decisions that can be committed
+	rep.dmut.RLock()
 	decToExec, ok := rep.decisions[rep.slotOut]
+	rep.dmut.RUnlock()
 	for ok {
 		// If slot of request I am about to excute is used in proposals, then
 		// 1. remove it from proposals, and
@@ -235,7 +255,9 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 			}
 		}
 		rep.perform(decToExec)
+		rep.dmut.RLock()
 		decToExec, ok = rep.decisions[rep.slotOut]
+		rep.dmut.RUnlock()
 	}
 	if _, ok := rep.failureDetector.leaders[rep.myID]; ok {
 		// propose() iff I am leader

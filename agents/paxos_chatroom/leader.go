@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync"
 	"time"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
@@ -19,6 +20,7 @@ type leaderState struct {
 	proposeInChan chan proposal          // channel into which replica pushes proposals
 	p1bOutChan    chan string            // channel into which leader pushes p1b to scout
 	p2bOutChans   map[uint64]chan string // channels into which leader pushes p1b to commanders
+	p2bMut        *sync.RWMutex          // mutex for p2bOutChans map
 }
 
 // Constructor
@@ -27,7 +29,8 @@ func (rep *ReplicaAgent) newLeaderState() *leaderState {
 		ballotNum:     &ballot{rep.myID, 0},
 		active:        false,
 		proposals:     make(map[uint64]*proposal),
-		proposeInChan: make(chan proposal, bufferSize)}
+		proposeInChan: make(chan proposal, bufferSize),
+		p2bMut:        new(sync.RWMutex)}
 }
 
 // Start running leader thread described in Fig 7 of PMMC
@@ -49,7 +52,9 @@ func (rep *ReplicaAgent) runLeader() {
 				rep.leader.proposals[prop.slot] = &prop
 				if rep.leader.active {
 					cmdP2bOutChan := make(chan string, bufferSize)
+					rep.leader.p2bMut.Lock()
 					rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
+					rep.leader.p2bMut.Unlock()
 					pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
 					go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
 				}
@@ -69,7 +74,9 @@ func (rep *ReplicaAgent) runLeader() {
 			// Spawn commanders for each pval
 			for _, prop := range rep.leader.proposals {
 				cmdP2bOutChan := make(chan string, bufferSize)
+				rep.leader.p2bMut.Lock()
 				rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
+				rep.leader.p2bMut.Unlock()
 				pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
 				go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
 			}
@@ -85,7 +92,6 @@ func (rep *ReplicaAgent) runLeader() {
 			}
 			rep.debugPrintf("New ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
 			time.Sleep(timeoutDuration * 4)
-			rep.leader.p2bOutChans = make(map[uint64]chan string)    // start a new set of channels
 			preemptedInChan = make(chan ballot, bufferSize)          // channel into which scout/cmdr pushes preempted msg
 			adoptedInChan = make(chan map[uint64]pValue, bufferSize) // channel into which scout pushes adopted msg
 			go rep.spawnScout(
@@ -217,7 +223,10 @@ func (rep *ReplicaAgent) handleP1b(request string) {
 func (rep *ReplicaAgent) handleP2b(request string) {
 	payload := strings.SplitN(request, " ", 2)[1]
 	_, slot, _ := parseP2bPayload(payload)
-	if c, ok := rep.leader.p2bOutChans[slot]; ok {
+	rep.leader.p2bMut.RLock()
+	c, ok := rep.leader.p2bOutChans[slot]
+	rep.leader.p2bMut.RUnlock()
+	if ok {
 		c <- payload
 		rep.debugPrintf("Deliver %s\n", request)
 	}

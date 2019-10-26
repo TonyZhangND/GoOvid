@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 // This file describes the states and transitions of a paxos replica that is related
@@ -12,13 +13,16 @@ import (
 type acceptorState struct {
 	ballotNum *ballot
 	accepted  map[uint64]string
+	amut      *sync.RWMutex // Mutex for accepted map
 	// accepted is map of slot to p2aPayload (i.e. string describing pValue)
 	// "<leaderID> <bNum> <slot> <clientID> <reqNum> <m>"
 }
 
 // Constructor
 func (rep *ReplicaAgent) newAcceptorState() *acceptorState {
-	return &acceptorState{accepted: make(map[uint64]string)}
+	return &acceptorState{
+		accepted: make(map[uint64]string),
+		amut:     new(sync.RWMutex)}
 }
 
 // Handle msg "p1a <sender> <balNum>"
@@ -30,7 +34,9 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 		rep.acceptor.ballotNum = newBallot
 	}
 	// Respond with "p1b <myID> <ballotNum.id> <ballotNum.n> <json.Marshal(accepted)>"
+	rep.acceptor.amut.RLock()
 	m, _ := json.Marshal(rep.acceptor.accepted)
+	rep.acceptor.amut.RUnlock()
 	response := fmt.Sprintf("p1b %d %d %d %s",
 		rep.myID,
 		rep.acceptor.ballotNum.id,
@@ -48,7 +54,9 @@ func (rep *ReplicaAgent) handleP2a(s string) {
 		rep.acceptor.ballotNum.n == pval.ballot.n {
 		// Accept pVal if I did not promise some higher ballot
 		pValStr := sSlice[1]
+		rep.acceptor.amut.Lock()
 		rep.acceptor.accepted[pval.slot] = pValStr
+		rep.acceptor.amut.Unlock()
 	}
 	// Respond with "p2b <myID> <slot> <ballotNum.id> <ballotNum.n>"
 	response := fmt.Sprintf("p2b %d %d %d %d",
