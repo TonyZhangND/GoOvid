@@ -59,7 +59,12 @@ func (rep *ReplicaAgent) runLeader() {
 			// pmax is a map of slot->pValue with highest ballot accepted
 			rep.debugPrintf("Leader adopted with ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
 			for slot, highestAcceptedPVal := range pmax {
-				rep.leader.proposals[slot].req = highestAcceptedPVal.req
+				if _, ok := rep.leader.proposals[slot]; ok {
+					rep.leader.proposals[slot].req = highestAcceptedPVal.req
+				} else {
+					prop := &proposal{highestAcceptedPVal.slot, highestAcceptedPVal.req}
+					rep.leader.proposals[slot] = prop
+				}
 			}
 			// Spawn commanders for each pval
 			for _, prop := range rep.leader.proposals {
