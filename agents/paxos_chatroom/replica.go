@@ -229,7 +229,6 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 				delete(rep.proposals, k)
 				if prop.req.hash() != decToExec.hash() {
 					// If req removed from rep.proposals is not decToExec
-					rep.debugPrintf("NONONO '%s' != '%s'\n", prop.hash(), decToExec.hash())
 					rep.requests[prop.hash()] = prop.req
 				}
 				break // No need to keep searching

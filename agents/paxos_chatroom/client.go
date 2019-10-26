@@ -119,14 +119,26 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 // Run begins the execution of the paxos agent.
 func (clt *ClientAgent) Run() {
 	clt.isActive = true
-	go clt.mainThread()
-	wg.Wait()
+	if clt.mode == "script" {
+		go clt.runScriptMode()
+	}
+	clt.mainThread()
+}
+
+func (clt *ClientAgent) runScriptMode() {
+	for clt.isActive {
+		r := &req{
+			reqNum: clt.nextReqNum,
+			m:      fmt.Sprintf("client %d request %d", clt.myID, clt.nextReqNum),
+			done:   make(chan bool)}
+		clt.reqQueue = append(clt.reqQueue, r)
+		clt.nextReqNum++
+		time.Sleep(commandInterval)
+	}
 }
 
 // Main execution thread of client agent
 func (clt *ClientAgent) mainThread() {
-	wg.Add(1)
-	defer wg.Done()
 	for clt.isActive {
 		if len(clt.reqQueue) == 0 {
 			// No pending requests. Take a break, have a KitKat
