@@ -129,7 +129,7 @@ func (clt *ClientAgent) runScriptMode() {
 	for clt.isActive {
 		r := &req{
 			reqNum: clt.nextReqNum,
-			m:      fmt.Sprintf("client %d request %d", clt.myID, clt.nextReqNum),
+			m:      fmt.Sprintf("(%d : %d)", clt.myID, clt.nextReqNum),
 			done:   make(chan bool)}
 		clt.reqQueue = append(clt.reqQueue, r)
 		clt.nextReqNum++
