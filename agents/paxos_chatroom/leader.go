@@ -27,7 +27,7 @@ func (rep *ReplicaAgent) newLeaderState() *leaderState {
 		ballotNum:     &ballot{rep.myID, 0},
 		active:        false,
 		proposals:     make(map[uint64]*proposal),
-		proposeInChan: make(chan proposal, len(rep.replicas))}
+		proposeInChan: make(chan proposal, bufferSize)}
 }
 
 // Start running leader thread described in Fig 7 of PMMC
@@ -48,7 +48,7 @@ func (rep *ReplicaAgent) runLeader() {
 				// If slot not already used
 				rep.leader.proposals[prop.slot] = &prop
 				if rep.leader.active {
-					cmdP2bOutChan := make(chan string)
+					cmdP2bOutChan := make(chan string, bufferSize)
 					rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
 					pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
 					go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
@@ -104,11 +104,15 @@ func (rep *ReplicaAgent) spawnScout(
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
 	myBallot := &ballot{rep.myID, baln}
 	processedPVals := make(map[uint64]pValue)
+
 	for acc := range rep.replicas {
 		// Send "p1a <sender> <balNum>"
 		waitfor[acc] = true
-		p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
-		rep.send(acc, p1a)
+
+		go func(acceptor c.ProcessID) {
+			p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
+			rep.send(acceptor, p1a)
+		}(acc)
 	}
 	for rep.isActive {
 		payload := <-p1bInChan
@@ -157,14 +161,17 @@ func (rep *ReplicaAgent) spawnCommander(
 	for acc := range rep.replicas {
 		// Send "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
 		waitfor[acc] = true
-		p2a := fmt.Sprintf("p2a %d %d %d %d %d %s",
-			myBallot.id,
-			myBallot.n,
-			pval.slot,
-			pval.req.clientID,
-			pval.req.reqNum,
-			pval.req.payload)
-		rep.send(acc, p2a)
+		go func(acceptor c.ProcessID) {
+			p2a := fmt.Sprintf("p2a %d %d %d %d %d %s",
+				myBallot.id,
+				myBallot.n,
+				pval.slot,
+				pval.req.clientID,
+				pval.req.reqNum,
+				pval.req.payload)
+			rep.send(acceptor, p2a)
+			// rep.debugPrintf("Commander sent {%v, %d, '%s'} sent p2a to %d\n", *pval.ballot, pval.slot, pval.req.payload, acc)
+		}(acc)
 	}
 	rep.debugPrintf("Commander {%v, %d, '%s'} sent p2a to all\n", *pval.ballot, pval.slot, pval.req.payload)
 	for rep.isActive {
@@ -175,6 +182,7 @@ func (rep *ReplicaAgent) spawnCommander(
 			delete(waitfor, acc)
 			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				// pVal is chosen. Broadcast "decision <slot> <clientID> <reqNum> <m>"
+				rep.debugPrintf("Commander {%v, %d, '%s'} won. Broadcast decision\n", *pval.ballot, pval.slot, pval.req.payload)
 				msg := fmt.Sprintf("decision %d %d %d %s",
 					pval.slot,
 					pval.req.clientID,
@@ -188,7 +196,7 @@ func (rep *ReplicaAgent) spawnCommander(
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
-			rep.debugPrintf("Commander for pval = {%v, %s, %s} preempted. No longer leader\n", pval.ballot, pval.slot, pval.req.payload)
+			rep.debugPrintf("Commander for pval = {%v, %d, %s} preempted. No longer leader\n", pval.ballot, pval.slot, pval.req.payload)
 			return
 		}
 	}
@@ -206,5 +214,6 @@ func (rep *ReplicaAgent) handleP2b(request string) {
 	_, slot, _ := parseP2bPayload(payload)
 	if c, ok := rep.leader.p2bOutChans[slot]; ok {
 		c <- payload
+		rep.debugPrintf("Deliver %s\n", request)
 	}
 }

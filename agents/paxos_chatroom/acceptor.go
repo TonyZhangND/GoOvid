@@ -41,6 +41,7 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 
 // Handle msg "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleP2a(s string) {
+	rep.debugPrintf("Receive p2a %s\n", s)
 	sSlice := strings.SplitN(s, " ", 2)
 	pval := parsePValue(sSlice[1])
 	if rep.acceptor.ballotNum.id == pval.ballot.id &&

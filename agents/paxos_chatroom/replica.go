@@ -199,11 +199,14 @@ func (rep *ReplicaAgent) perform(req *request) {
 	rep.chatLog = append(rep.chatLog, fmt.Sprintf("%d: %s", req.clientID, req.payload))
 	response := fmt.Sprintf("committed %d %d", req.clientID, req.reqNum)
 	rep.send(req.clientID, response)
+	rep.slotOut++
+	rep.debugPrintf("Commited {%d, %d, %s}\n", req.clientID, req.reqNum, req.payload)
 }
 
 // Handles a decision message "decision <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleDecision(d string) {
 	// Store decision in rep.decisions
+	rep.debugPrintf("Receive %s\n", d)
 	dSlice := strings.SplitN(d, " ", 5)
 	slot, _ := strconv.ParseUint(dSlice[1], 10, 64)
 	id, _ := strconv.ParseUint(dSlice[2], 10, 64)
@@ -226,6 +229,7 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 				delete(rep.proposals, k)
 				if prop.hash() != decToExec.hash() {
 					// If req removed from rep.proposals is not decToExec
+					rep.debugPrintf("NONONO %s != %s\n", prop.hash(), decToExec.hash())
 					rep.requests[prop.hash()] = prop.req
 				}
 				break // No need to keep searching

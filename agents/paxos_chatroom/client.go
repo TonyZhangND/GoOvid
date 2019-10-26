@@ -152,10 +152,11 @@ func (clt *ClientAgent) mainThread() {
 						clt.myID, clt.myID, r.reqNum, r.m)
 				case <-r.ticker.C:
 					// Timer expired, resend request
-					clt.debugPrintf("Timer expired for (%d, %d)\n", clt.myID, r.reqNum)
-					for rep := range clt.replicas {
-						clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
-					}
+					// TODO: don't resend for now
+					// clt.debugPrintf("Timer expired for (%d, %d)\n", clt.myID, r.reqNum)
+					// for rep := range clt.replicas {
+					// 	clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
+					// }
 				}
 			}
 		}
