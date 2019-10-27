@@ -23,6 +23,7 @@ type ControllerAgent struct {
 	isActive         bool
 	clients          map[c.ProcessID]int // using map because we want search capability
 	replicas         map[c.ProcessID]int
+	alive            map[c.PortNum]int // map of ports to process ID, to keep track of processes manually started
 }
 
 // Init fills the empty ctr struct with this agent's fields and attributes.
@@ -34,6 +35,8 @@ func (ctr *ControllerAgent) Init(attrs map[string]interface{},
 	ctr.fatalAgentErrorf = fatalAgentErrorf
 	ctr.debugPrintf = debugPrintf
 	ctr.isActive = false
+
+	ctr.alive = make(map[c.PortNum]int)
 
 	// Parse and store attributes
 	ctr.clients, ctr.replicas = make(map[c.ProcessID]int), make(map[c.ProcessID]int)
@@ -102,7 +105,8 @@ func (ctr *ControllerAgent) Run() {
 				fmt.Printf("Failed to start 127.0.0.1:%d : %v\n", nodePort, err)
 				continue
 			}
-			fmt.Printf("Started box 127.0.0.1:%d\n", nodePort)
+			ctr.alive[c.PortNum(nodePort)] = proc.Process.Pid
+			fmt.Printf("Started box 127.0.0.1:%d, pid = %d\n", nodePort, proc.Process.Pid)
 		case "req":
 			// Issue a client request
 			if len(inputSlice) < 2 {
@@ -126,30 +130,32 @@ func (ctr *ControllerAgent) Run() {
 			}
 			m := payload[1]
 			ctr.send(dest, fmt.Sprintf("issue %s", m))
-		case "kill": // Issue a kill command
-			payload := strings.Split(inputSlice[1], " ")
-			if len(payload) > 1 {
+		case "kill":
+			// Issue a kill command
+			if len(inputSlice) < 2 {
 				fmt.Println("Invalid input")
 				continue
 			}
-			target := payload[0]
-			if target == "primary" {
-				for rep := range ctr.replicas {
-					ctr.send(rep, "kill primary")
-				}
-			} else { // assasinate a specific target
-				tango, err := strconv.ParseUint(target, 10, 64)
-				if err != nil {
-					fmt.Printf("Invalid assasination target %v\n", target)
-					continue
-				}
-				_, ok := ctr.replicas[c.ProcessID(tango)]
-				if !ok {
-					fmt.Printf("Invalid assasination target %v\n", target)
-					continue
-				}
-				ctr.send(c.ProcessID(tango), fmt.Sprintf("kill"))
+			nodePort, err := strconv.ParseUint(inputSlice[1], 10, 64)
+			if err != nil {
+				fmt.Println("Invalid input")
+				continue
 			}
+			pid, ok := ctr.alive[c.PortNum(nodePort)]
+			if !ok {
+				fmt.Printf("Box 127.0.0.1:%d is already dead\n", nodePort)
+				continue
+			}
+			// proc := exec.Command("./ovid", "-log", "configs/paxos.json", box)
+			proc := exec.Command("kill", "-9", strconv.FormatInt(int64(pid), 10))
+			proc.Stdout = os.Stdout
+			err = proc.Start()
+			if err != nil {
+				fmt.Printf("Failed to kill 127.0.0.1:%d : %v\n", nodePort, err)
+				continue
+			}
+			delete(ctr.alive, c.PortNum(nodePort))
+			fmt.Printf("Killed box 127.0.0.1:%d, pid = %d\n", nodePort, proc.Process.Pid)
 		case "dump":
 			if len(inputSlice) > 1 {
 				fmt.Println("Invalid input")
