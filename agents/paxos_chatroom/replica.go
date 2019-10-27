@@ -141,12 +141,9 @@ func (rep *ReplicaAgent) dumpPaxosLog() {
 		rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
 	}
 	w := bufio.NewWriter(f)
-	// for _, s := range rep.chatLog {
-	// 	_, err = w.WriteString(fmt.Sprintf("%s\n", s))
-	// 	if err != nil {
-	// 		rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
-	// 	}
-	// }
+	if len(rep.decisions) == 0 {
+		return
+	}
 	keys := make([]int, len(rep.decisions))
 	i := 0
 	for k := range rep.decisions {
