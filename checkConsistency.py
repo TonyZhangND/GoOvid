@@ -21,7 +21,12 @@ for i in range(max_lines):
             s.add(f[i])
     if len(s) > 1:
         print(f"Inconsistency detected in line {i+1}")
-        lines = [fl[i].strip() for fl in file_lines]
+        lines = []
+        for fl in file_lines :
+            if i < len(fl):
+                lines.append(fl[i].strip())
+            else:
+                lines.append("-")
         print(",\n".join(lines))
         exit(1)
 print("All good :)")
