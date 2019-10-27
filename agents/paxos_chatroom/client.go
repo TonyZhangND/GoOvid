@@ -35,10 +35,11 @@ type ClientAgent struct {
 
 // req struct represents a client request
 type req struct {
-	reqNum uint64
-	m      string
-	ticker *time.Ticker // used to mark intervals after which req should be re-issued
-	done   chan bool    // used to inform mainThread that req has been committed
+	reqNum          uint64
+	m               string
+	ticker          *time.Ticker // used to mark intervals after which req should be re-issued
+	timeoutMultiple int
+	done            chan bool // used to inform mainThread that req has been committed
 }
 
 // Init fills the empty client struct with this agent's fields and attributes.
@@ -122,9 +123,10 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 		// Append request to reqQueue
 		clt.nmut.RLock()
 		r := &req{
-			reqNum: clt.nextReqNum,
-			m:      msgSlice[1],
-			done:   make(chan bool)}
+			reqNum:          clt.nextReqNum,
+			m:               msgSlice[1],
+			done:            make(chan bool),
+			timeoutMultiple: 1}
 		clt.nmut.RUnlock()
 		clt.qmut.Lock()
 		clt.reqQueue = append(clt.reqQueue, r)
@@ -148,12 +150,12 @@ func (clt *ClientAgent) Run() {
 
 func (clt *ClientAgent) runScriptMode() {
 	for clt.isActive {
-		clt.debugPrintf("Issuing request %d\n", clt.nextReqNum)
 		clt.nmut.RLock()
 		r := &req{
-			reqNum: clt.nextReqNum,
-			m:      fmt.Sprintf("(%d : %d)", clt.myID, clt.nextReqNum),
-			done:   make(chan bool)}
+			reqNum:          clt.nextReqNum,
+			m:               fmt.Sprintf("(%d : %d)", clt.myID, clt.nextReqNum),
+			done:            make(chan bool),
+			timeoutMultiple: 1}
 		clt.nmut.RUnlock()
 		clt.qmut.Lock()
 		clt.reqQueue = append(clt.reqQueue, r)
@@ -181,6 +183,7 @@ func (clt *ClientAgent) mainThread() {
 			clt.qmut.RUnlock()
 
 			// Broadcast request "<clientID> <reqNum> <m>" to replicas
+			clt.debugPrintf("Issuing request %d\n", r.reqNum)
 			for rep := range clt.replicas {
 				clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
 			}
@@ -197,11 +200,17 @@ func (clt *ClientAgent) mainThread() {
 						clt.myID, clt.myID, r.reqNum, r.m)
 				case <-r.ticker.C:
 					// Timer expired, resend request
-					// TODO: don't resend for now
-					// clt.debugPrintf("Timer expired for (%d, %d)\n", clt.myID, r.reqNum)
-					// for rep := range clt.replicas {
-					// 	clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
-					// }
+					// increment timer duration
+					r.timeoutMultiple++
+					duration := timeoutDuration
+					for i := 0; i < r.timeoutMultiple; i++ {
+						duration = duration * 2
+					}
+					r.ticker = time.NewTicker(duration)
+					clt.debugPrintf("Timeout for (%d, %d)\n", clt.myID, r.reqNum)
+					for rep := range clt.replicas {
+						clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
+					}
 				}
 			}
 		}

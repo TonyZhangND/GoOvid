@@ -70,8 +70,8 @@ then
         let port=8000+$clientID
         box="127.0.0.1:$port"
         let clientID++
-        # nohup ./ovid -debug configs/paxos.json $box &
-        nohup ./ovid configs/paxos.json $box &
+        nohup ./ovid -log configs/paxos.json $box &
+        # nohup ./ovid configs/paxos.json $box &
     done
 fi
 disown

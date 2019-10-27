@@ -14,7 +14,7 @@ import (
 const (
 	pingInterval    = 100 * time.Microsecond
 	sleepDuration   = 100 * time.Millisecond
-	timeoutDuration = 1000 * time.Millisecond
+	timeoutDuration = 500 * time.Millisecond
 	bufferSize      = 10000
 	commandInterval = 3000 * time.Millisecond
 )
