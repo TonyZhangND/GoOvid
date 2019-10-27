@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	c "github.com/TonyZhangND/GoOvid/commons"
@@ -28,6 +29,8 @@ type ClientAgent struct {
 	// Client state
 	nextReqNum uint64
 	reqQueue   []*req
+	qmut       *sync.RWMutex
+	nmut       *sync.RWMutex
 }
 
 // req struct represents a client request
@@ -63,6 +66,8 @@ func (clt *ClientAgent) Init(attrs map[string]interface{},
 	// Initialize client state
 	clt.nextReqNum = 0
 	clt.reqQueue = make([]*req, 0)
+	clt.qmut = new(sync.RWMutex)
+	clt.nmut = new(sync.RWMutex)
 }
 
 // Halt stops the execution of the agent.
@@ -87,13 +92,23 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 			clt.fatalAgentErrorf(
 				"Received unexpected commit response '%s'\n", request)
 		}
-		if len(clt.reqQueue) > 0 && clt.reqQueue[0].reqNum == n {
+
+		clt.qmut.RLock()
+		notEmpty := len(clt.reqQueue) > 0
+		matchReq := false
+		if notEmpty {
+			matchReq = clt.reqQueue[0].reqNum == n
+		}
+		clt.qmut.RUnlock()
+		if notEmpty && matchReq {
 			// If this is a response to a currently outstanding request,
 			// stop the ticker and declare the request as done
+			clt.qmut.Lock()
 			clt.reqQueue[0].ticker.Stop()
 			clt.reqQueue[0].done <- true
 			close(clt.reqQueue[0].done) // done with this request, close the channel
 			clt.reqQueue = clt.reqQueue[1:]
+			clt.qmut.Unlock()
 		}
 
 	case 9: // incoming msg from controller
@@ -105,12 +120,18 @@ func (clt *ClientAgent) Deliver(request string, port c.PortNum) {
 				request, port)
 		}
 		// Append request to reqQueue
+		clt.nmut.RLock()
 		r := &req{
 			reqNum: clt.nextReqNum,
 			m:      msgSlice[1],
 			done:   make(chan bool)}
+		clt.nmut.RUnlock()
+		clt.qmut.Lock()
 		clt.reqQueue = append(clt.reqQueue, r)
+		clt.qmut.Unlock()
+		clt.nmut.Lock()
 		clt.nextReqNum++
+		clt.nmut.Unlock()
 	default:
 		clt.fatalAgentErrorf("Received '%s' in unexpected port %v\n", request, port)
 	}
@@ -127,12 +148,18 @@ func (clt *ClientAgent) Run() {
 
 func (clt *ClientAgent) runScriptMode() {
 	for clt.isActive {
+		clt.nmut.RLock()
 		r := &req{
 			reqNum: clt.nextReqNum,
 			m:      fmt.Sprintf("(%d : %d)", clt.myID, clt.nextReqNum),
 			done:   make(chan bool)}
+		clt.nmut.RUnlock()
+		clt.qmut.Lock()
 		clt.reqQueue = append(clt.reqQueue, r)
+		clt.qmut.Unlock()
+		clt.nmut.Lock()
 		clt.nextReqNum++
+		clt.nmut.Unlock()
 		time.Sleep(commandInterval)
 	}
 }
@@ -140,12 +167,17 @@ func (clt *ClientAgent) runScriptMode() {
 // Main execution thread of client agent
 func (clt *ClientAgent) mainThread() {
 	for clt.isActive {
-		if len(clt.reqQueue) == 0 {
+		clt.qmut.RLock()
+		isEmpty := len(clt.reqQueue) == 0
+		clt.qmut.RUnlock()
+		if isEmpty {
 			// No pending requests. Take a break, have a KitKat
 			time.Sleep(sleepDuration)
 		} else {
 			// Process first message in queue
+			clt.qmut.RLock()
 			r := clt.reqQueue[0] // Outstanding request
+			clt.qmut.RUnlock()
 
 			// Broadcast request "<clientID> <reqNum> <m>" to replicas
 			for rep := range clt.replicas {
