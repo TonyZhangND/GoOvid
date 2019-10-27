@@ -49,7 +49,7 @@ echo "Starting all boxes"
 
 # Start replica boxes in background
 replicaID=1
-if [$start] 
+if $start
 then
     while [ $replicaID -lt $(( $f*2 + 2 )) ] 
     do
@@ -61,7 +61,7 @@ then
     done
 fi
 
-if [$start] 
+if $start
 then
     # Start client boxes in background
     clientID=100

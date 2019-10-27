@@ -154,7 +154,7 @@ func (rep *ReplicaAgent) dumpPaxosLog() {
 	maxSlotFilled := keys[len(keys)-1]
 	for i = 0; i <= maxSlotFilled; i++ {
 		if prop, ok := rep.decisions[uint64(i)]; ok {
-			_, err := w.WriteString(fmt.Sprintf("%d, %d, '%s'\n", prop.clientID, prop.clientID, prop.payload))
+			_, err := w.WriteString(fmt.Sprintf("%d, %d, '%s'\n", prop.clientID, prop.reqNum, prop.payload))
 			if err != nil {
 				rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
 			}
