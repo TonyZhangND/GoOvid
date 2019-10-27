@@ -6,6 +6,7 @@ f=$1
 nclients=$2
 mode=$3
 loss=$4
+start=$5
 
 # TODO: REMOVE IN PRDUCTION
 ./build
@@ -48,25 +49,31 @@ echo "Starting all boxes"
 
 # Start replica boxes in background
 replicaID=1
-while [ $replicaID -lt $(( $f*2 + 2 )) ] 
-do
-    let port=5000+$replicaID
-    box="127.0.0.1:$port"
-    let replicaID++
-    # nohup ./ovid -log -loss=$4 configs/paxos.json $box &
-    nohup ./ovid -loss=$4 configs/paxos.json $box &
-done
+if [$start] 
+then
+    while [ $replicaID -lt $(( $f*2 + 2 )) ] 
+    do
+        let port=5000+$replicaID
+        box="127.0.0.1:$port"
+        let replicaID++
+        # nohup ./ovid -log -loss=$4 configs/paxos.json $box &
+        nohup ./ovid -loss=$4 configs/paxos.json $box &
+    done
+fi
 
-# Start client boxes in background
-clientID=100
-while [ $clientID -lt $(( 100 + $nclients )) ] 
-do
-    let port=8000+$clientID
-    box="127.0.0.1:$port"
-    let clientID++
-    # nohup ./ovid -debug configs/paxos.json $box &
-    nohup ./ovid configs/paxos.json $box &
-done
+if [$start] 
+then
+    # Start client boxes in background
+    clientID=100
+    while [ $clientID -lt $(( 100 + $nclients )) ] 
+    do
+        let port=8000+$clientID
+        box="127.0.0.1:$port"
+        let clientID++
+        # nohup ./ovid -debug configs/paxos.json $box &
+        nohup ./ovid configs/paxos.json $box &
+    done
+fi
 disown
 
 # Start special controller box in foreground
