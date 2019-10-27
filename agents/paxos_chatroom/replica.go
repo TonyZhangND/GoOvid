@@ -170,12 +170,15 @@ func (rep *ReplicaAgent) handleClientRequest(r string) {
 	req := &request{c.ProcessID(cid), rn, m}
 
 	// Add req to my handy dandy set of requests and propose()
+	rep.rmut.Lock()
 	rep.requests[req.hash()] = req
+	rep.rmut.Unlock()
 	rep.propose()
 }
 
 // Propose method in Fig 1 of PMMC
 func (rep *ReplicaAgent) propose() {
+	rep.rmut.Lock()
 	for k, req := range rep.requests {
 		// For each req in rep.requests, start proposing it for each slot
 		// that I have not proposed a value nor learned a decision
@@ -191,11 +194,14 @@ func (rep *ReplicaAgent) propose() {
 		// Found an empty slot
 		delete(rep.requests, k)
 		prop := &proposal{rep.slotIn, req}
+		rep.pmut.Lock()
 		rep.proposals[prop.hash()] = prop
+		rep.pmut.Unlock()
 		// Forward proposal to leader thread
 		rep.leader.proposeInChan <- *prop
 		rep.slotIn++
 	}
+	rep.rmut.Unlock()
 }
 
 // Perform method in Fig 1 of PMMC
@@ -243,17 +249,21 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 		// 1. remove it from proposals, and
 		// 2. if the req removed is not the one I am about to execute, put it back
 		//    into rep.requests
+		rep.pmut.Lock()
 		for k, prop := range rep.proposals {
 			if prop.slot == rep.slotOut {
 				// If slotOut used for a command in rep.proposals
 				delete(rep.proposals, k)
 				if prop.req.hash() != decToExec.hash() {
 					// If req removed from rep.proposals is not decToExec
+					rep.rmut.Lock()
 					rep.requests[prop.hash()] = prop.req
+					rep.rmut.Unlock()
 				}
 				break // No need to keep searching
 			}
 		}
+		rep.pmut.Unlock()
 		rep.perform(decToExec)
 		rep.dmut.RLock()
 		decToExec, ok = rep.decisions[rep.slotOut]
