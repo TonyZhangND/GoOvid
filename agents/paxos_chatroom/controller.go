@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -81,7 +82,28 @@ func (ctr *ControllerAgent) Run() {
 			fmt.Println("Terminating paxos cluster")
 			ctr.Halt()
 			os.Exit(0)
-		case "req": // Issue a client request
+		case "start":
+			// Start a node
+			if len(inputSlice) < 2 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			nodePort, err := strconv.ParseUint(inputSlice[1], 10, 64)
+			if err != nil {
+				fmt.Println("Invalid input")
+				continue
+			}
+			box := fmt.Sprintf("127.0.0.1:%d", nodePort)
+			proc := exec.Command("./ovid", "-log", "configs/paxos.json", box)
+			proc.Stdout = os.Stdout
+			err = proc.Start()
+			if err != nil {
+				fmt.Printf("Failed to start 127.0.0.1:%d : %v\n", nodePort, err)
+				continue
+			}
+			fmt.Printf("Started box 127.0.0.1:%d\n", nodePort)
+		case "req":
+			// Issue a client request
 			if len(inputSlice) < 2 {
 				fmt.Println("Invalid input")
 				continue

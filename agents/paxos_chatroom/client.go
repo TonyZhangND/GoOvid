@@ -148,6 +148,7 @@ func (clt *ClientAgent) Run() {
 
 func (clt *ClientAgent) runScriptMode() {
 	for clt.isActive {
+		clt.debugPrintf("Issuing request %d\n", clt.nextReqNum)
 		clt.nmut.RLock()
 		r := &req{
 			reqNum: clt.nextReqNum,
