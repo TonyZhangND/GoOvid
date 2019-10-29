@@ -27,6 +27,7 @@ func (rep *ReplicaAgent) newAcceptorState() *acceptorState {
 
 // Handle msg "p1a <sender> <balNum>"
 func (rep *ReplicaAgent) handleP1a(s string) {
+	rep.debugPrintf("Receive %s\n", s)
 	payload := strings.SplitN(s, " ", 2)[1]
 	leaderID, bNum := parseP1aPayload(payload)
 	newBallot := &ballot{leaderID, bNum}
@@ -43,6 +44,7 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 		rep.acceptor.ballotNum.n,
 		m)
 	rep.send(leaderID, response)
+	rep.debugPrintf("Sent %s to %d\n", response, leaderID)
 }
 
 // Handle msg "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"

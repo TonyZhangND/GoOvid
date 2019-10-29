@@ -91,7 +91,7 @@ func (rep *ReplicaAgent) runLeader() {
 				rep.leader.ballotNum.n = bal.n + 1
 			}
 			rep.debugPrintf("New ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
-			time.Sleep(timeoutDuration * 4)
+			time.Sleep(timeoutDuration * 10)
 			preemptedInChan = make(chan ballot, bufferSize)          // channel into which scout/cmdr pushes preempted msg
 			adoptedInChan = make(chan map[uint64]pValue, bufferSize) // channel into which scout pushes adopted msg
 			go rep.spawnScout(

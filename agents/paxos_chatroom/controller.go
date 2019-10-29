@@ -98,7 +98,7 @@ func (ctr *ControllerAgent) Run() {
 			}
 			box := fmt.Sprintf("127.0.0.1:%d", nodePort)
 			// proc := exec.Command("./ovid", "-log", "configs/paxos.json", box)
-			proc := exec.Command("./ovid", "configs/paxos.json", box)
+			proc := exec.Command("./ovid", "-log", "configs/paxos.json", box)
 			proc.Stdout = os.Stdout
 			err = proc.Start()
 			if err != nil {

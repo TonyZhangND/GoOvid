@@ -24,11 +24,12 @@ type ReplicaAgent struct {
 	isActive         bool
 
 	// Replica attributes
-	myID     c.ProcessID
-	replicas map[c.ProcessID]int
-	clients  map[c.ProcessID]int
-	mode     string // script or manual modes
-	output   string // path to output file for 'dump' command
+	myID      c.ProcessID
+	replicas  map[c.ProcessID]int
+	clients   map[c.ProcessID]int
+	mode      string         // script or manual modes
+	output    string         // path to output file for 'dump' command
+	skipSlots map[uint64]int // set containing slots to skip, see spec
 
 	// Replica state
 	chatLog   []string // application state
@@ -70,6 +71,14 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 		rep.clients[id] = 0
 	}
 	rep.output = attrs["output"].(string)
+	rep.skipSlots = make(map[uint64]int)
+	if _, ok := attrs["skip"].([]interface{}); ok {
+		for _, x := range attrs["skip"].([]interface{}) {
+			slot := uint64(x.(float64))
+			rep.skipSlots[slot] = 0
+		}
+	}
+	rep.debugPrintf("%v\n", rep.skipSlots)
 
 	// Initialize replica state
 	rep.chatLog = make([]string, 0)
@@ -224,11 +233,16 @@ func (rep *ReplicaAgent) propose() {
 		rep.dmut.RLock()
 		_, slotTaken := rep.decisions[rep.slotIn]
 		rep.dmut.RUnlock()
-		for slotTaken {
+		_, skipSlot := rep.skipSlots[rep.slotIn]
+		for slotTaken || skipSlot {
+			if skipSlot {
+				rep.debugPrintf("%v\n", rep.skipSlots)
+			}
 			rep.slotIn++
 			rep.dmut.RLock()
 			_, slotTaken = rep.decisions[rep.slotIn]
 			rep.dmut.RUnlock()
+			_, skipSlot = rep.skipSlots[rep.slotIn]
 		}
 		// Found an empty slot
 		delete(rep.requests, k)
