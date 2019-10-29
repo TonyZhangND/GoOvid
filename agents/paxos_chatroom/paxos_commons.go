@@ -32,6 +32,10 @@ func (r *request) hash() string {
 	return fmt.Sprintf("%v", *r)
 }
 
+func (r *request) eq(other *request) bool {
+	return r.hash() == other.hash()
+}
+
 // a proposal describes a (slot, request) pair
 type proposal struct {
 	slot uint64 // slot number
@@ -53,6 +57,11 @@ func (b *ballot) lt(other *ballot) bool {
 		return b.id < other.id
 	}
 	return b.n < other.n
+}
+
+// Returns true iff b < other
+func (b *ballot) lteq(other *ballot) bool {
+	return b.n <= other.n && b.id <= other.id
 }
 
 // Returns true iff b = other

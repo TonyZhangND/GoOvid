@@ -31,7 +31,7 @@ func (rep *ReplicaAgent) handleP1a(s string) {
 	payload := strings.SplitN(s, " ", 2)[1]
 	leaderID, bNum := parseP1aPayload(payload)
 	newBallot := &ballot{leaderID, bNum}
-	if rep.acceptor.ballotNum == nil || rep.acceptor.ballotNum.lt(newBallot) {
+	if rep.acceptor.ballotNum == nil || rep.acceptor.ballotNum.lteq(newBallot) {
 		rep.acceptor.ballotNum = newBallot
 	}
 	// Respond with "p1b <myID> <ballotNum.id> <ballotNum.n> <json.Marshal(accepted)>"
@@ -52,9 +52,7 @@ func (rep *ReplicaAgent) handleP2a(s string) {
 	rep.debugPrintf("Receive p2a %s\n", s)
 	sSlice := strings.SplitN(s, " ", 2)
 	pval := parsePValue(sSlice[1])
-	if rep.acceptor.ballotNum == nil ||
-		(rep.acceptor.ballotNum.id <= pval.ballot.id &&
-			rep.acceptor.ballotNum.n <= pval.ballot.n) {
+	if rep.acceptor.ballotNum == nil || rep.acceptor.ballotNum.lteq(pval.ballot) {
 		// Accept pVal if I did not promise some higher ballot
 		pValStr := sSlice[1]
 		newBal := &ballot{pval.ballot.id, pval.ballot.n}

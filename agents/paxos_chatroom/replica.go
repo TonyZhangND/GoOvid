@@ -217,10 +217,29 @@ func (rep *ReplicaAgent) handleClientRequest(r string) {
 	m := reqSlice[2]
 	req := &request{c.ProcessID(cid), rn, m}
 
-	// Add req to my handy dandy set of requests and propose()
-	rep.rmut.Lock()
-	rep.requests[req.hash()] = req
-	rep.rmut.Unlock()
+	// Add req to my handy dandy set of requests only if it is not repeated, and propose()
+	isOldReq := false
+	rep.rmut.RLock()
+	for _, myReq := range rep.requests {
+		if req.eq(myReq) {
+			isOldReq = true
+		}
+	}
+	rep.rmut.RUnlock()
+	rep.pmut.RLock()
+	if !isOldReq {
+		for _, p := range rep.proposals {
+			if req.eq(p.req) {
+				isOldReq = true
+			}
+		}
+	}
+	rep.pmut.RUnlock()
+	if !isOldReq {
+		rep.rmut.Lock()
+		rep.requests[req.hash()] = req
+		rep.rmut.Unlock()
+	}
 	rep.propose()
 }
 
