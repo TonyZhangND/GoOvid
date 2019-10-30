@@ -177,30 +177,78 @@ func (rep *ReplicaAgent) dumpPaxosLog() {
 	w.Flush()
 }
 
+func (rep *ReplicaAgent) dumpChatLog() {
+	rep.debugPrintf("Handle dump the stupid way\n")
+	f, err := os.Create(rep.output)
+	defer f.Close()
+	if err != nil {
+		rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
+	}
+	if len(rep.decisions) == 0 {
+		return
+	}
+	keys := make([]int, len(rep.decisions))
+	i := 0
+	for k := range rep.decisions {
+		keys[i] = int(k)
+		i++
+	}
+	sort.Ints(keys)
+	firstHole := len(keys) - 1
+	for i := 0; i < len(keys); i++ {
+		if keys[i] != i {
+			firstHole = i
+			break
+		}
+	}
+	rep.debugPrintf("First hole is %d\n", firstHole)
+
+	seen := make(map[string]bool)
+	chatLog := make([]string, 0)
+	rep.dmut.RLock()
+	for i := 0; i < firstHole; i++ {
+		s := uint64(keys[i])
+		if _, ok := seen[rep.decisions[s].hash()]; !ok {
+			log := fmt.Sprintf("%d, %d : '%s'\n", rep.decisions[s].clientID, rep.decisions[s].reqNum, rep.decisions[s].payload)
+			chatLog = append(chatLog, log)
+		}
+		seen[rep.decisions[s].hash()] = true
+	}
+	rep.dmut.RUnlock()
+	w := bufio.NewWriter(f)
+	for _, c := range chatLog {
+		_, err := w.WriteString(c)
+		if err != nil {
+			rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
+		}
+	}
+	w.Flush()
+}
+
 func (rep *ReplicaAgent) handleControllerCommand(r string) {
 	cmd := strings.SplitN(r, " ", 2)[0]
 	switch cmd {
 	case "dump":
-		// rep.dumpPaxosLog()
-		rep.debugPrintf("Handle dump\n")
-		// rep.debugPrintf("LOG %v\n", rep.chatLog)
-		f, err := os.Create(rep.output)
-		// rep.debugPrintf("HELLO1\n")
-		defer f.Close()
-		if err != nil {
-			rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
-		}
-		w := bufio.NewWriter(f)
-		// rep.debugPrintf("HELLO2 %d\n", len(rep.chatLog))
-		for _, s := range rep.chatLog {
-			rep.debugPrintf("%s\n", s)
-			_, err = w.WriteString(fmt.Sprintf("%s\n", s))
-			if err != nil {
-				rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
-			}
-		}
-		// rep.debugPrintf("BOB\n")
-		w.Flush()
+		rep.dumpChatLog()
+		// rep.debugPrintf("Handle dump\n")
+		// // rep.debugPrintf("LOG %v\n", rep.chatLog)
+		// f, err := os.Create(rep.output)
+		// // rep.debugPrintf("HELLO1\n")
+		// defer f.Close()
+		// if err != nil {
+		// 	rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
+		// }
+		// w := bufio.NewWriter(f)
+		// // rep.debugPrintf("HELLO2 %d\n", len(rep.chatLog))
+		// for _, s := range rep.chatLog {
+		// 	rep.debugPrintf("%s\n", s)
+		// 	_, err = w.WriteString(fmt.Sprintf("%s\n", s))
+		// 	if err != nil {
+		// 		rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
+		// 	}
+		// }
+		// // rep.debugPrintf("BOB\n")
+		// w.Flush()
 
 	case "kill":
 		// TODO
