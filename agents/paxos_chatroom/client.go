@@ -158,8 +158,12 @@ func (clt *ClientAgent) runScriptMode() {
 			timeoutMultiple: 1}
 		clt.nmut.RUnlock()
 		clt.qmut.Lock()
-		clt.reqQueue = append(clt.reqQueue, r)
+		l := len(clt.reqQueue)
 		clt.qmut.Unlock()
+		if l == 0 {
+			clt.reqQueue = append(clt.reqQueue, r)
+			continue
+		}
 		clt.nmut.Lock()
 		clt.nextReqNum++
 		clt.nmut.Unlock()

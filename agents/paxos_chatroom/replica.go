@@ -217,6 +217,16 @@ func (rep *ReplicaAgent) handleClientRequest(r string) {
 	m := reqSlice[2]
 	req := &request{c.ProcessID(cid), rn, m}
 
+	// If request is already decided, return the decision
+	rep.dmut.RLock()
+	for _, decision := range rep.decisions {
+		if decision.eq(req) {
+			defer rep.dmut.RUnlock()
+			return
+		}
+	}
+	rep.dmut.RUnlock()
+
 	// Add req to my handy dandy set of requests only if it is not repeated, and propose()
 	isOldReq := false
 	rep.rmut.RLock()
