@@ -222,6 +222,8 @@ func (rep *ReplicaAgent) handleClientRequest(r string) {
 	for _, decision := range rep.decisions {
 		if decision.eq(req) {
 			defer rep.dmut.RUnlock()
+			response := fmt.Sprintf("committed %d %d", req.clientID, req.reqNum)
+			rep.send(req.clientID, response)
 			return
 		}
 	}

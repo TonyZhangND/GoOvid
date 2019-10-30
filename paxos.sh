@@ -7,9 +7,6 @@ nclients=$2
 mode=$3
 loss=$4
 
-# TODO: REMOVE IN PRDUCTION
-./build
-
 if [ $f -gt 49 ] 
 then
     echo "Invalid args: Max f supported is 49. You used $f."
