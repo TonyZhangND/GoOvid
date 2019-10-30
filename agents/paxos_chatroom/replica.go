@@ -181,22 +181,20 @@ func (rep *ReplicaAgent) handleControllerCommand(r string) {
 	cmd := strings.SplitN(r, " ", 2)[0]
 	switch cmd {
 	case "dump":
-		rep.dumpPaxosLog()
-		// The code below does the application chat log. There are inconsistencies
-		// that are presumably due to bugs in application state update
-		// rep.debugPrintf("Handle dump\n")
-		// f, err := os.Create(rep.output)
-		// defer f.Close()
-		// if err != nil {
-		// 	rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
-		// }
-		// w := bufio.NewWriter(f)
-		// for _, s := range rep.chatLog {
-		// 	_, err = w.WriteString(fmt.Sprintf("%s\n", s))
-		// 	if err != nil {
-		// 		rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
-		// 	}
-		// }
+		// rep.dumpPaxosLog()
+		rep.debugPrintf("Handle dump\n")
+		f, err := os.Create(rep.output)
+		defer f.Close()
+		if err != nil {
+			rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
+		}
+		w := bufio.NewWriter(f)
+		for _, s := range rep.chatLog {
+			_, err = w.WriteString(fmt.Sprintf("%s\n", s))
+			if err != nil {
+				rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
+			}
+		}
 
 	case "kill":
 		// TODO
