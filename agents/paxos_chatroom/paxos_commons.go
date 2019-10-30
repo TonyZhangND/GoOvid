@@ -14,9 +14,9 @@ import (
 const (
 	pingInterval    = 100 * time.Microsecond
 	sleepDuration   = 100 * time.Millisecond
-	timeoutDuration = 500 * time.Millisecond
+	timeoutDuration = 1000 * time.Millisecond
 	bufferSize      = 10000
-	commandInterval = 3000 * time.Millisecond
+	commandInterval = 1000 * time.Millisecond
 )
 
 var wg sync.WaitGroup
@@ -30,6 +30,10 @@ type request struct {
 
 func (r *request) hash() string {
 	return fmt.Sprintf("%v", *r)
+}
+
+func (r *request) eq(other *request) bool {
+	return r.hash() == other.hash()
 }
 
 // a proposal describes a (slot, request) pair
@@ -51,6 +55,14 @@ type ballot struct {
 func (b *ballot) lt(other *ballot) bool {
 	if b.n == other.n {
 		return b.id < other.id
+	}
+	return b.n < other.n
+}
+
+// Returns true iff b < other
+func (b *ballot) lteq(other *ballot) bool {
+	if b.n == other.n {
+		return b.id <= other.id
 	}
 	return b.n < other.n
 }

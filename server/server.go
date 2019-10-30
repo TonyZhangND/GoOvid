@@ -50,7 +50,6 @@ func send(senderID, phyDest c.ProcessID, destPort c.PortNum, msg string) {
 	// Drop message according to loss rate
 	rand.Seed(time.Now().UnixNano())
 	if rand.Float64() < lossRate {
-		debugPrintf("Dropping message %s from %v to %v\n", msg, senderID, phyDest)
 		return
 	}
 

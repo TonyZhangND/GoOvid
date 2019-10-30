@@ -6,10 +6,6 @@ f=$1
 nclients=$2
 mode=$3
 loss=$4
-start=$5
-
-# TODO: REMOVE IN PRDUCTION
-./build
 
 if [ $f -gt 49 ] 
 then
@@ -49,19 +45,18 @@ echo "Starting all boxes"
 
 # Start replica boxes in background
 replicaID=1
-if $start
+if [ $mode != "manual" ]
 then
     while [ $replicaID -lt $(( $f*2 + 2 )) ] 
     do
         let port=5000+$replicaID
         box="127.0.0.1:$port"
         let replicaID++
-        nohup ./ovid -log -loss=$4 configs/paxos.json $box &
-        # nohup ./ovid -loss=$4 configs/paxos.json $box &
+        nohup ./ovid -loss=$4 configs/paxos.json $box &
     done
 fi
 
-if $start
+if [ $mode != "manual" ]
 then
     # Start client boxes in background
     clientID=100

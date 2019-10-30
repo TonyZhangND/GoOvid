@@ -17,8 +17,8 @@ for name in outputFiles:
 for i in range(max_lines):
     s = set()
     for f in file_lines:
-        if i < len(f):
-            s.add(f[i])
+        if i < len(f) and f[i].strip() != 'hole':
+            s.add(f[i].strip())
     if len(s) > 1:
         print(f"Inconsistency detected in line {i+1}")
         lines = []

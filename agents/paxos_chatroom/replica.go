@@ -24,11 +24,12 @@ type ReplicaAgent struct {
 	isActive         bool
 
 	// Replica attributes
-	myID     c.ProcessID
-	replicas map[c.ProcessID]int
-	clients  map[c.ProcessID]int
-	mode     string // script or manual modes
-	output   string // path to output file for 'dump' command
+	myID      c.ProcessID
+	replicas  map[c.ProcessID]int
+	clients   map[c.ProcessID]int
+	mode      string         // script or manual modes
+	output    string         // path to output file for 'dump' command
+	skipSlots map[uint64]int // set containing slots to skip, see spec
 
 	// Replica state
 	chatLog   []string // application state
@@ -70,6 +71,14 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 		rep.clients[id] = 0
 	}
 	rep.output = attrs["output"].(string)
+	rep.skipSlots = make(map[uint64]int)
+	if _, ok := attrs["skip"].([]interface{}); ok {
+		for _, x := range attrs["skip"].([]interface{}) {
+			slot := uint64(x.(float64))
+			rep.skipSlots[slot] = 0
+		}
+	}
+	rep.debugPrintf("Skipping these slots : %v\n", rep.skipSlots)
 
 	// Initialize replica state
 	rep.chatLog = make([]string, 0)
@@ -208,10 +217,41 @@ func (rep *ReplicaAgent) handleClientRequest(r string) {
 	m := reqSlice[2]
 	req := &request{c.ProcessID(cid), rn, m}
 
-	// Add req to my handy dandy set of requests and propose()
-	rep.rmut.Lock()
-	rep.requests[req.hash()] = req
-	rep.rmut.Unlock()
+	// If request is already decided, return the decision
+	rep.dmut.RLock()
+	for _, decision := range rep.decisions {
+		if decision.eq(req) {
+			defer rep.dmut.RUnlock()
+			response := fmt.Sprintf("committed %d %d", req.clientID, req.reqNum)
+			rep.send(req.clientID, response)
+			return
+		}
+	}
+	rep.dmut.RUnlock()
+
+	// Add req to my handy dandy set of requests only if it is not repeated, and propose()
+	isOldReq := false
+	rep.rmut.RLock()
+	for _, myReq := range rep.requests {
+		if req.eq(myReq) {
+			isOldReq = true
+		}
+	}
+	rep.rmut.RUnlock()
+	rep.pmut.RLock()
+	if !isOldReq {
+		for _, p := range rep.proposals {
+			if req.eq(p.req) {
+				isOldReq = true
+			}
+		}
+	}
+	rep.pmut.RUnlock()
+	if !isOldReq {
+		rep.rmut.Lock()
+		rep.requests[req.hash()] = req
+		rep.rmut.Unlock()
+	}
 	rep.propose()
 }
 
@@ -224,11 +264,16 @@ func (rep *ReplicaAgent) propose() {
 		rep.dmut.RLock()
 		_, slotTaken := rep.decisions[rep.slotIn]
 		rep.dmut.RUnlock()
-		for slotTaken {
+		s, skipSlot := rep.skipSlots[rep.slotIn]
+		for slotTaken || skipSlot {
+			if skipSlot {
+				rep.debugPrintf("Skipping slot %d\n", s)
+			}
 			rep.slotIn++
 			rep.dmut.RLock()
 			_, slotTaken = rep.decisions[rep.slotIn]
 			rep.dmut.RUnlock()
+			_, skipSlot = rep.skipSlots[rep.slotIn]
 		}
 		// Found an empty slot
 		delete(rep.requests, k)
@@ -267,13 +312,13 @@ func (rep *ReplicaAgent) perform(req *request) {
 // Handles a decision message "decision <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleDecision(d string) {
 	// Store decision in rep.decisions
-	rep.debugPrintf("Receive %s\n", d)
 	dSlice := strings.SplitN(d, " ", 5)
 	slot, _ := strconv.ParseUint(dSlice[1], 10, 64)
 	id, _ := strconv.ParseUint(dSlice[2], 10, 64)
-	cid := c.ProcessID(id)
+	cid := c.ProcessID(id) // client who issued the request
 	reqNum, _ := strconv.ParseUint(dSlice[3], 10, 64)
 	m := dSlice[4]
+	rep.debugPrintf("Received decision for %d : (%d, %d)\n", slot, cid, reqNum)
 	newDec := &request{cid, reqNum, m}
 	rep.dmut.Lock()
 	rep.decisions[slot] = newDec

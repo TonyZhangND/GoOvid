@@ -73,17 +73,23 @@ func (rep *ReplicaAgent) runLeader() {
 			}
 			// Spawn commanders for each pval
 			for _, prop := range rep.leader.proposals {
-				cmdP2bOutChan := make(chan string, bufferSize)
-				rep.leader.p2bMut.Lock()
-				rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
-				rep.leader.p2bMut.Unlock()
-				pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
-				go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
+				rep.dmut.RLock()
+				_, decided := rep.decisions[prop.slot]
+				rep.dmut.RUnlock()
+				if !decided {
+					// Propose pval for all slots that don't have a decision
+					cmdP2bOutChan := make(chan string, bufferSize)
+					rep.leader.p2bMut.Lock()
+					rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
+					rep.leader.p2bMut.Unlock()
+					pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
+					go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
+				}
 			}
 			rep.leader.active = true
 		case bal := <-preemptedInChan:
 			// Handle Pre-empted
-			rep.debugPrintf("Leader preempted with ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n)
+			rep.debugPrintf("Leader {%d, %d} preempted with ballot {%d, %d}\n", rep.leader.ballotNum.id, rep.leader.ballotNum.n, bal.id, bal.n)
 
 			// Update my ballot number and spawn scout
 			if rep.leader.ballotNum.lt(&bal) {
@@ -113,18 +119,25 @@ func (rep *ReplicaAgent) spawnScout(
 	rep.leader.p2bOutChans = make(map[uint64]chan string) // start a new set of channels
 	p1bInChan := rep.leader.p1bOutChan
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p1b is pending
+	wfmut := new(sync.RWMutex)
 	myBallot := &ballot{rep.myID, baln}
 	processedPVals := make(map[uint64]pValue)
 
-	for acc := range rep.replicas {
-		// Send "p1a <sender> <balNum>"
-		waitfor[acc] = true
-
-		go func(acceptor c.ProcessID) {
-			p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
-			rep.send(acceptor, p1a)
-		}(acc)
-	}
+	go func() {
+		for rep.isActive {
+			for acc := range rep.replicas {
+				// Send "p1a <sender> <balNum>"
+				wfmut.Lock()
+				waitfor[acc] = true
+				wfmut.Unlock()
+				// go func(acceptor c.ProcessID) {
+				p1a := fmt.Sprintf("p1a %d %d", myBallot.id, myBallot.n)
+				rep.send(acc, p1a)
+				// }(acc)
+			}
+			time.Sleep(timeoutDuration * 5)
+		}
+	}()
 	for rep.isActive {
 		payload := <-p1bInChan
 		acc, ballot, pVals := parseP1bPayload(payload)
@@ -143,16 +156,19 @@ func (rep *ReplicaAgent) spawnScout(
 				}
 			}
 			// Mark acc as responded
+			wfmut.Lock()
 			delete(waitfor, acc)
-			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
+			l := len(waitfor)
+			wfmut.Unlock()
+			if l <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				adoptedOutChan <- processedPVals
-				rep.debugPrintf("Scout {%d, %d} killed - adopted\n", rep.myID, baln)
+				rep.debugPrintf("Scout {%d, %d} ADOPTED\n", rep.myID, baln)
 				return
 			}
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
-			rep.debugPrintf("Scout {%d, %d} killed - preempted\n", rep.myID, baln)
+			rep.debugPrintf("Scout {%d, %d} PREEMPTED\n", rep.myID, baln)
 			return
 		}
 	}
@@ -167,31 +183,42 @@ func (rep *ReplicaAgent) spawnCommander(
 	rep.debugPrintf("Commander spawned for pval = {%v, %d, '%s'}\n", *pval.ballot, pval.slot, pval.req.payload)
 
 	waitfor := make(map[c.ProcessID]bool) // set of acceptors from which p2b is pending
+	wfmut := new(sync.RWMutex)
 	myBallot := pval.ballot
 
-	for acc := range rep.replicas {
-		// Send "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
-		waitfor[acc] = true
-		go func(acceptor c.ProcessID) {
-			p2a := fmt.Sprintf("p2a %d %d %d %d %d %s",
-				myBallot.id,
-				myBallot.n,
-				pval.slot,
-				pval.req.clientID,
-				pval.req.reqNum,
-				pval.req.payload)
-			rep.send(acceptor, p2a)
-			// rep.debugPrintf("Commander sent {%v, %d, '%s'} sent p2a to %d\n", *pval.ballot, pval.slot, pval.req.payload, acc)
-		}(acc)
-	}
+	go func() {
+		for rep.isActive {
+			for acc := range rep.replicas {
+				// Send "p2a <balID> <balNum> <slot> <clientID> <reqNum> <m>"
+				wfmut.Lock()
+				waitfor[acc] = true
+				wfmut.Unlock()
+				// go func(acceptor c.ProcessID) {
+				p2a := fmt.Sprintf("p2a %d %d %d %d %d %s",
+					myBallot.id,
+					myBallot.n,
+					pval.slot,
+					pval.req.clientID,
+					pval.req.reqNum,
+					pval.req.payload)
+				rep.send(acc, p2a)
+				// rep.debugPrintf("Commander sent {%v, %d, '%s'} sent p2a to %d\n", *pval.ballot, pval.slot, pval.req.payload, acc)
+				// }(acc)
+			}
+			time.Sleep(timeoutDuration * 5)
+		}
+	}()
 	rep.debugPrintf("Commander {%v, %d, '%s'} sent p2a to all\n", *pval.ballot, pval.slot, pval.req.payload)
 	for rep.isActive {
 		payload := <-p2bInChan
 		acc, _, ballot := parseP2bPayload(payload)
 		if myBallot.eq(ballot) {
 			// Accepted :)
+			wfmut.Lock()
 			delete(waitfor, acc)
-			if len(waitfor) <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
+			l := len(waitfor)
+			wfmut.Unlock()
+			if l <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				// pVal is chosen. Broadcast "decision <slot> <clientID> <reqNum> <m>"
 				rep.debugPrintf("Commander {%v, %d, '%s'} won. Broadcast decision\n", *pval.ballot, pval.slot, pval.req.payload)
 				msg := fmt.Sprintf("decision %d %d %d %s",
