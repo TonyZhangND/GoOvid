@@ -78,7 +78,7 @@ func (rep *ReplicaAgent) Init(attrs map[string]interface{},
 			rep.skipSlots[slot] = 0
 		}
 	}
-	rep.debugPrintf("%v\n", rep.skipSlots)
+	rep.debugPrintf("Skipping these slots : %v\n", rep.skipSlots)
 
 	// Initialize replica state
 	rep.chatLog = make([]string, 0)
@@ -252,10 +252,10 @@ func (rep *ReplicaAgent) propose() {
 		rep.dmut.RLock()
 		_, slotTaken := rep.decisions[rep.slotIn]
 		rep.dmut.RUnlock()
-		_, skipSlot := rep.skipSlots[rep.slotIn]
+		s, skipSlot := rep.skipSlots[rep.slotIn]
 		for slotTaken || skipSlot {
 			if skipSlot {
-				rep.debugPrintf("%v\n", rep.skipSlots)
+				rep.debugPrintf("Skipping slot %d\n", s)
 			}
 			rep.slotIn++
 			rep.dmut.RLock()
@@ -300,13 +300,13 @@ func (rep *ReplicaAgent) perform(req *request) {
 // Handles a decision message "decision <slot> <clientID> <reqNum> <m>"
 func (rep *ReplicaAgent) handleDecision(d string) {
 	// Store decision in rep.decisions
-	rep.debugPrintf("Receive %s\n", d)
 	dSlice := strings.SplitN(d, " ", 5)
 	slot, _ := strconv.ParseUint(dSlice[1], 10, 64)
 	id, _ := strconv.ParseUint(dSlice[2], 10, 64)
-	cid := c.ProcessID(id)
+	cid := c.ProcessID(id) // client who issued the request
 	reqNum, _ := strconv.ParseUint(dSlice[3], 10, 64)
 	m := dSlice[4]
+	rep.debugPrintf("Received decision for %d : (%d, %d)\n", slot, cid, reqNum)
 	newDec := &request{cid, reqNum, m}
 	rep.dmut.Lock()
 	rep.decisions[slot] = newDec

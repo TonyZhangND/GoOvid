@@ -183,7 +183,7 @@ func (clt *ClientAgent) mainThread() {
 			clt.qmut.RUnlock()
 
 			// Broadcast request "<clientID> <reqNum> <m>" to replicas
-			clt.debugPrintf("Issuing request %d\n", r.reqNum)
+			clt.debugPrintf("ISSUE request %d : '%s'\n", r.reqNum, r.m)
 			for rep := range clt.replicas {
 				clt.send(rep, fmt.Sprintf("%d %d %s", clt.myID, r.reqNum, r.m))
 			}
@@ -196,8 +196,8 @@ func (clt *ClientAgent) mainThread() {
 				case <-r.done:
 					// Request committed
 					committed = true
-					clt.debugPrintf("Client %d ack (%d, %d, %s) committed\n",
-						clt.myID, clt.myID, r.reqNum, r.m)
+					clt.debugPrintf("COMMIT request %d : '%s'\n",
+						r.reqNum, r.m)
 				case <-r.ticker.C:
 					// Timer expired, resend request
 					// increment timer duration

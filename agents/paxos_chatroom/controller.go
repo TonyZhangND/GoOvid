@@ -91,14 +91,24 @@ func (ctr *ControllerAgent) Run() {
 				fmt.Println("Invalid input")
 				continue
 			}
-			nodePort, err := strconv.ParseUint(inputSlice[1], 10, 64)
+			payload := strings.SplitN(inputSlice[1], " ", 2)
+			if len(payload) < 2 {
+				fmt.Println("Invalid input")
+				continue
+			}
+			nodePort, err := strconv.ParseUint(payload[0], 10, 64)
 			if err != nil {
 				fmt.Println("Invalid input")
 				continue
 			}
+			loss, err := strconv.ParseFloat(payload[1], 64)
+			if err != nil || loss < 0 || loss > 1 {
+				fmt.Printf("Invalid input : %v\n", err)
+				continue
+			}
 			box := fmt.Sprintf("127.0.0.1:%d", nodePort)
-			// proc := exec.Command("./ovid", "-log", "configs/paxos.json", box)
-			proc := exec.Command("./ovid", "-loss=0.4", "-log", "configs/paxos.json", box)
+			proc := exec.Command("./ovid",
+				"-log", fmt.Sprintf("-loss=%f", loss), "configs/paxos.json", box)
 			proc.Stdout = os.Stdout
 			err = proc.Start()
 			if err != nil {
@@ -106,7 +116,7 @@ func (ctr *ControllerAgent) Run() {
 				continue
 			}
 			ctr.alive[c.PortNum(nodePort)] = proc.Process.Pid
-			fmt.Printf("Started box 127.0.0.1:%d, pid = %d\n", nodePort, proc.Process.Pid)
+			fmt.Printf("Started box 127.0.0.1:%d, pid = %d, loss=%f\n", nodePort, proc.Process.Pid, loss)
 		case "req":
 			// Issue a client request
 			if len(inputSlice) < 2 {
