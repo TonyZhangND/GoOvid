@@ -6,7 +6,6 @@ f=$1
 nclients=$2
 mode=$3
 loss=$4
-start=$5
 
 # TODO: REMOVE IN PRDUCTION
 ./build
@@ -49,7 +48,7 @@ echo "Starting all boxes"
 
 # Start replica boxes in background
 replicaID=1
-if $start
+if [ $mode != "manual" ]
 then
     while [ $replicaID -lt $(( $f*2 + 2 )) ] 
     do
@@ -61,7 +60,7 @@ then
     done
 fi
 
-if $start
+if [ $mode != "manual" ]
 then
     # Start client boxes in background
     clientID=100

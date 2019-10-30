@@ -14,7 +14,7 @@ import (
 const (
 	pingInterval    = 100 * time.Microsecond
 	sleepDuration   = 100 * time.Millisecond
-	timeoutDuration = 500 * time.Millisecond
+	timeoutDuration = 1000 * time.Millisecond
 	bufferSize      = 10000
 	commandInterval = 1000 * time.Millisecond
 )
@@ -61,7 +61,10 @@ func (b *ballot) lt(other *ballot) bool {
 
 // Returns true iff b < other
 func (b *ballot) lteq(other *ballot) bool {
-	return b.n <= other.n && b.id <= other.id
+	if b.n == other.n {
+		return b.id <= other.id
+	}
+	return b.n < other.n
 }
 
 // Returns true iff b = other
