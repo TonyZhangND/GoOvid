@@ -73,12 +73,18 @@ func (rep *ReplicaAgent) runLeader() {
 			}
 			// Spawn commanders for each pval
 			for _, prop := range rep.leader.proposals {
-				cmdP2bOutChan := make(chan string, bufferSize)
-				rep.leader.p2bMut.Lock()
-				rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
-				rep.leader.p2bMut.Unlock()
-				pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
-				go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
+				rep.dmut.RLock()
+				_, decided := rep.decisions[prop.slot]
+				rep.dmut.RUnlock()
+				if !decided {
+					// Propose pval for all slots that don't have a decision
+					cmdP2bOutChan := make(chan string, bufferSize)
+					rep.leader.p2bMut.Lock()
+					rep.leader.p2bOutChans[prop.slot] = cmdP2bOutChan
+					rep.leader.p2bMut.Unlock()
+					pval := &pValue{rep.leader.ballotNum.copy(), prop.slot, prop.req}
+					go rep.spawnCommander(pval, preemptedInChan, cmdP2bOutChan)
+				}
 			}
 			rep.leader.active = true
 		case bal := <-preemptedInChan:
@@ -156,13 +162,13 @@ func (rep *ReplicaAgent) spawnScout(
 			wfmut.Unlock()
 			if l <= int(math.Floor(float64(len(rep.replicas))/2.0)) {
 				adoptedOutChan <- processedPVals
-				rep.debugPrintf("Scout {%d, %d} killed - adopted\n", rep.myID, baln)
+				rep.debugPrintf("Scout {%d, %d} ADOPTED\n", rep.myID, baln)
 				return
 			}
 		} else {
 			// Pre-empted :(
 			preemptedOutChan <- *ballot
-			rep.debugPrintf("Scout {%d, %d} killed - preempted\n", rep.myID, baln)
+			rep.debugPrintf("Scout {%d, %d} PREEMPTED\n", rep.myID, baln)
 			return
 		}
 	}
