@@ -183,18 +183,24 @@ func (rep *ReplicaAgent) handleControllerCommand(r string) {
 	case "dump":
 		// rep.dumpPaxosLog()
 		rep.debugPrintf("Handle dump\n")
+		// rep.debugPrintf("LOG %v\n", rep.chatLog)
 		f, err := os.Create(rep.output)
+		// rep.debugPrintf("HELLO1\n")
 		defer f.Close()
 		if err != nil {
 			rep.fatalAgentErrorf("Error creating file %s: %v\n", rep.output, err)
 		}
 		w := bufio.NewWriter(f)
+		// rep.debugPrintf("HELLO2 %d\n", len(rep.chatLog))
 		for _, s := range rep.chatLog {
+			rep.debugPrintf("%s\n", s)
 			_, err = w.WriteString(fmt.Sprintf("%s\n", s))
 			if err != nil {
 				rep.fatalAgentErrorf("Error writing to file %s: %v\n", rep.output, err)
 			}
 		}
+		// rep.debugPrintf("BOB\n")
+		w.Flush()
 
 	case "kill":
 		// TODO
@@ -288,10 +294,11 @@ func (rep *ReplicaAgent) propose() {
 
 // Perform method in Fig 1 of PMMC
 func (rep *ReplicaAgent) perform(req *request) {
+	rep.debugPrintf("performing %v\n", *req)
 	rep.dmut.RLock()
-	for s, dec := range rep.decisions {
+	for s, oldDec := range rep.decisions {
 		// If req has been previously committed, ignore it
-		if s < rep.slotOut && dec.hash() == req.hash() {
+		if rep.slotOut > s && oldDec.eq(req) {
 			rep.slotOut++
 			rep.dmut.RUnlock()
 			return
@@ -318,6 +325,15 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 	m := dSlice[4]
 	rep.debugPrintf("Received decision for %d : (%d, %d)\n", slot, cid, reqNum)
 	newDec := &request{cid, reqNum, m}
+
+	// ignore if decision already received
+	rep.dmut.RLock()
+	if _, ok := rep.decisions[slot]; ok {
+		rep.dmut.RUnlock()
+		return
+	}
+	rep.dmut.RUnlock()
+
 	rep.dmut.Lock()
 	rep.decisions[slot] = newDec
 	rep.dmut.Unlock()
@@ -327,6 +343,7 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 	decToExec, ok := rep.decisions[rep.slotOut]
 	rep.dmut.RUnlock()
 	for ok {
+		rep.debugPrintf("HEYHEY for %d : (%d, %d)\n", slot, cid, reqNum)
 		// If slot of request I am about to excute is used in proposals, then
 		// 1. remove it from proposals, and
 		// 2. if the req removed is not the one I am about to execute, put it back
@@ -336,7 +353,7 @@ func (rep *ReplicaAgent) handleDecision(d string) {
 			if prop.slot == rep.slotOut {
 				// If slotOut used for a command in rep.proposals
 				delete(rep.proposals, k)
-				if prop.req.hash() != decToExec.hash() {
+				if !prop.req.eq(decToExec) {
 					// If req removed from rep.proposals is not decToExec
 					rep.rmut.Lock()
 					rep.requests[prop.hash()] = prop.req

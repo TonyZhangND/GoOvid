@@ -52,7 +52,7 @@ then
         let port=5000+$replicaID
         box="127.0.0.1:$port"
         let replicaID++
-        nohup ./ovid -loss=$4 configs/paxos.json $box &
+        nohup ./ovid -log -loss=$4 configs/paxos.json $box &
     done
 fi
 
@@ -65,8 +65,8 @@ then
         let port=8000+$clientID
         box="127.0.0.1:$port"
         let clientID++
-        # nohup ./ovid -log configs/paxos.json $box &
-        nohup ./ovid configs/paxos.json $box &
+        nohup ./ovid -log configs/paxos.json $box &
+        # nohup ./ovid configs/paxos.json $box &
     done
 fi
 disown
